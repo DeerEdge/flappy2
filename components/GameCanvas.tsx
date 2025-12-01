@@ -72,9 +72,8 @@ export default function GameCanvas({ gameMode, onScoreChange, onGameOver }: Game
         e.preventDefault();
         handleFlap();
       }}
-      className="cursor-pointer rounded-lg shadow-2xl border-4 border-stone-800"
+      className="cursor-pointer border-4 border-[var(--neon-green)] box-glow-green"
       style={{ touchAction: 'none' }}
     />
   );
 }
-

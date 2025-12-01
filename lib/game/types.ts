@@ -78,20 +78,41 @@ export const BIRD_CONFIG = {
   startY: 250,
 };
 
+// Retro arcade color palette
 export const COLORS = {
-  sky: '#70c5ce',
-  ground: '#ded895',
-  groundDark: '#d2b666',
-  pipe: '#73bf2e',
-  pipeDark: '#558022',
-  pipeHighlight: '#8ed43a',
-  bird: '#f7dc6f',
-  birdDark: '#f39c12',
-  birdBeak: '#e74c3c',
-  text: '#ffffff',
+  // Sky - darker, more arcade-like
+  sky: '#1a1a2e',
+  skyLight: '#16213e',
+  
+  // Ground - pixel art style
+  ground: '#2d572c',
+  groundDark: '#1e3d1c',
+  groundLight: '#3d7a3c',
+  
+  // Pipes - neon green arcade style
+  pipe: '#39ff14',
+  pipeDark: '#2bc40e',
+  pipeHighlight: '#5fff3f',
+  pipeBorder: '#1a8c0a',
+  
+  // Bird - bright yellow/orange
+  bird: '#ffff00',
+  birdDark: '#ff8c00',
+  birdBeak: '#ff4444',
+  birdEye: '#ffffff',
+  
+  // UI Text
+  text: '#39ff14',
   textShadow: '#000000',
-  shield: '#3498db',
-  slowmo: '#9b59b6',
-  double: '#f1c40f',
+  textCyan: '#00ffff',
+  textMagenta: '#ff00ff',
+  textYellow: '#ffff00',
+  
+  // Power-ups - neon colors
+  shield: '#00ffff',
+  slowmo: '#ff00ff',
+  double: '#ffff00',
+  
+  // Effects
+  glow: '#39ff14',
 };
-

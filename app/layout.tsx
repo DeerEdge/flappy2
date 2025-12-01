@@ -1,22 +1,22 @@
 import type { Metadata } from "next";
-import { Space_Grotesk, JetBrains_Mono } from "next/font/google";
+import { Press_Start_2P, VT323 } from "next/font/google";
 import "./globals.css";
 
-const spaceGrotesk = Space_Grotesk({
-  variable: "--font-sans",
+const pressStart2P = Press_Start_2P({
+  variable: "--font-pixel",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: "400",
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
+const vt323 = VT323({
+  variable: "--font-retro",
   subsets: ["latin"],
-  weight: ["400", "500", "700"],
+  weight: "400",
 });
 
 export const metadata: Metadata = {
-  title: "Flappy Bird",
-  description: "Classic Flappy Bird game with power-ups mode",
+  title: "FLAPPY BIRD",
+  description: "Classic Flappy Bird arcade game with power-ups mode",
   icons: {
     icon: "/favicon.ico",
   },
@@ -30,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} antialiased bg-stone-950`}
+        className={`${pressStart2P.variable} ${vt323.variable} antialiased`}
       >
         {children}
       </body>

@@ -43,59 +43,63 @@ export default function Leaderboard({ gameMode, refreshTrigger }: LeaderboardPro
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
+  const getRankColor = (index: number) => {
+    switch (index) {
+      case 0: return 'text-[var(--neon-yellow)] glow-yellow';
+      case 1: return 'text-gray-300';
+      case 2: return 'text-orange-400';
+      default: return 'text-gray-500';
+    }
+  };
+
+  const getRankBg = (index: number) => {
+    switch (index) {
+      case 0: return 'bg-[var(--neon-yellow)]/10 border-[var(--neon-yellow)]/30';
+      case 1: return 'bg-gray-500/10 border-gray-500/30';
+      case 2: return 'bg-orange-500/10 border-orange-500/30';
+      default: return 'bg-transparent border-gray-800';
+    }
+  };
+
   return (
-    <div className="w-full max-w-sm bg-stone-900/80 backdrop-blur-sm rounded-xl p-4 border border-stone-700">
-      <h2 className="text-lg font-bold text-white mb-3 flex items-center gap-2">
-        <span className="text-amber-400">🏆</span>
-        Leaderboard
-        <span className="text-xs font-normal text-stone-400 ml-auto">
-          {gameMode === 'original' ? 'Classic' : 'Power-Ups'}
+    <div className="w-full arcade-panel p-4">
+      <h2 className="font-pixel text-[10px] text-[var(--neon-cyan)] mb-3 flex items-center gap-2">
+        <span className="text-lg">★</span>
+        HIGH SCORES
+        <span className="font-retro text-xs text-gray-500 ml-auto">
+          {gameMode === 'original' ? 'CLASSIC' : 'POWER-UPS'}
         </span>
       </h2>
       
       {loading ? (
         <div className="flex justify-center py-8">
-          <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          <div className="font-pixel text-[10px] text-[var(--neon-green)] animate-pulse-neon">
+            LOADING...
+          </div>
         </div>
       ) : entries.length === 0 ? (
-        <p className="text-stone-500 text-center py-6 text-sm">
-          No scores yet. Be the first!
+        <p className="font-retro text-sm text-gray-500 text-center py-6">
+          NO SCORES YET
+          <br />
+          <span className="text-[var(--neon-green)]">BE THE FIRST!</span>
         </p>
       ) : (
         <div className="space-y-1">
           {entries.map((entry, index) => (
             <div
               key={entry.id}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                index === 0
-                  ? 'bg-amber-500/20 border border-amber-500/30'
-                  : index === 1
-                  ? 'bg-stone-400/10 border border-stone-400/20'
-                  : index === 2
-                  ? 'bg-orange-600/10 border border-orange-600/20'
-                  : 'bg-stone-800/50'
-              }`}
+              className={`flex items-center gap-2 px-2 py-1.5 border transition-colors ${getRankBg(index)}`}
             >
-              <span
-                className={`w-6 h-6 flex items-center justify-center rounded-full text-xs font-bold ${
-                  index === 0
-                    ? 'bg-amber-500 text-black'
-                    : index === 1
-                    ? 'bg-stone-400 text-black'
-                    : index === 2
-                    ? 'bg-orange-600 text-white'
-                    : 'bg-stone-700 text-stone-400'
-                }`}
-              >
+              <span className={`font-pixel text-xs w-6 text-center ${getRankColor(index)}`}>
                 {index + 1}
               </span>
-              <span className="flex-1 text-white font-medium truncate">
+              <span className="flex-1 font-retro text-sm text-white truncate uppercase">
                 {entry.player_name}
               </span>
-              <span className="text-emerald-400 font-bold tabular-nums">
+              <span className="font-pixel text-xs text-[var(--neon-green)] tabular-nums">
                 {entry.score}
               </span>
-              <span className="text-stone-500 text-xs">
+              <span className="font-retro text-xs text-gray-600 hidden sm:block">
                 {formatDate(entry.created_at)}
               </span>
             </div>
@@ -105,4 +109,3 @@ export default function Leaderboard({ gameMode, refreshTrigger }: LeaderboardPro
     </div>
   );
 }
-

@@ -144,16 +144,31 @@ function GameContent() {
 
             {gameMode === 'obstacles' && (
               <div className="arcade-panel p-3 w-full max-w-[400px]">
-                <div className="font-pixel text-[8px] text-[var(--neon-orange)] mb-2 text-center">OBSTACLES</div>
-                <div className="flex justify-center gap-4 font-retro text-xs">
-                  <div className="flex items-center gap-1">
-                    <span className="w-4 h-4 rounded bg-[var(--neon-orange)] flex items-center justify-center text-black text-[10px] font-bold">↕</span>
-                    <span className="text-[var(--neon-orange)]">MOVING</span>
+                <div className="font-pixel text-[8px] text-[var(--neon-orange)] mb-2 text-center">SURVIVAL MODE</div>
+                <div className="grid grid-cols-5 gap-2 font-retro text-[10px]">
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="w-5 h-5 flex items-center justify-center text-[#ff3333] text-lg">▲</span>
+                    <span className="text-[#ff3333]">SPIKE</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <span className="w-4 h-4 rounded bg-[var(--neon-orange)] flex items-center justify-center text-black text-[10px] font-bold">⟳</span>
-                    <span className="text-[var(--neon-orange)]">ROTATING</span>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="w-5 h-5 flex items-center justify-center text-[#00ffff] text-lg">━</span>
+                    <span className="text-[#00ffff]">LASER</span>
                   </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="w-5 h-5 flex items-center justify-center text-[#ff00ff] text-lg">◎</span>
+                    <span className="text-[#ff00ff]">PORTAL</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="w-5 h-5 flex items-center justify-center text-[#ff6600] text-lg">●</span>
+                    <span className="text-[#ff6600]">METEOR</span>
+                  </div>
+                  <div className="flex flex-col items-center gap-1">
+                    <span className="w-5 h-5 flex items-center justify-center text-[#39ff14] text-lg">║</span>
+                    <span className="text-[#39ff14]">WALL</span>
+                  </div>
+                </div>
+                <div className="font-pixel text-[7px] text-gray-500 mt-2 text-center">
+                  SURVIVE • PORTALS = +3 PTS
                 </div>
               </div>
             )}

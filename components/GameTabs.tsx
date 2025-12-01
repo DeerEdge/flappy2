@@ -10,7 +10,7 @@ interface GameTabsProps {
 const modes: { mode: GameMode; label: string; color: string }[] = [
   { mode: 'original', label: 'CLASSIC', color: 'green' },
   { mode: 'modified', label: 'POWER-UPS', color: 'magenta' },
-  { mode: 'obstacles', label: 'OBSTACLES', color: 'orange' },
+  { mode: 'obstacles', label: 'SURVIVAL', color: 'orange' },
 ];
 
 export default function GameTabs({ activeMode, onModeChange }: GameTabsProps) {

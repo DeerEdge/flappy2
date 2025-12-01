@@ -2,7 +2,8 @@ export type GameMode = 'original' | 'modified' | 'obstacles';
 
 export type PowerUpType = 'shield' | 'slowmo' | 'double';
 
-export type ObstacleType = 'moving' | 'shrinking' | 'rotating';
+// New obstacle types for endless runner mode
+export type ObstacleType = 'spike' | 'laser' | 'portal' | 'meteor' | 'barrier';
 
 export interface PowerUp {
   type: PowerUpType;
@@ -18,20 +19,35 @@ export interface ActivePowerUp {
   endTime: number;
 }
 
+// Unified obstacle interface for endless runner mode
 export interface Obstacle {
   type: ObstacleType;
   x: number;
   y: number;
   width: number;
   height: number;
-  // For moving obstacles
+  // Common properties
+  active: boolean;
+  passed: boolean;
+  // For spike - position on ground or ceiling
+  position?: 'ground' | 'ceiling';
+  // For laser - toggle timing
+  onTime?: number;
+  offTime?: number;
+  isOn?: boolean;
+  toggleTimer?: number;
+  // For portal - teleport destination
+  teleported?: boolean;
+  // For meteor - diagonal movement
+  velocityX?: number;
+  velocityY?: number;
+  // For barrier - gap position and movement
+  gapY?: number;
+  gapHeight?: number;
   direction?: number;
   speed?: number;
   minY?: number;
   maxY?: number;
-  // For rotating obstacles
-  angle?: number;
-  rotationSpeed?: number;
 }
 
 export interface Pipe {
@@ -41,7 +57,6 @@ export interface Pipe {
   width: number;
   passed: boolean;
   powerUp?: PowerUp;
-  obstacle?: Obstacle;
 }
 
 export interface Bird {
@@ -53,9 +68,17 @@ export interface Bird {
   rotation: number;
 }
 
+// Visual effect for power-up collection feedback
+export interface CollectEffect {
+  type: PowerUpType;
+  startTime: number;
+  duration: number;
+}
+
 export interface GameState {
   bird: Bird;
   pipes: Pipe[];
+  obstacles: Obstacle[]; // Separate array for obstacles mode
   score: number;
   highScore: number;
   gameOver: boolean;
@@ -64,6 +87,7 @@ export interface GameState {
   gameMode: GameMode;
   activePowerUps: ActivePowerUp[];
   hasShield: boolean;
+  collectEffect: CollectEffect | null; // For visual feedback
   // Debug state
   debugMode?: boolean;
   forcedState?: 'start' | 'playing' | 'gameover';
@@ -136,9 +160,12 @@ export const COLORS = {
   slowmo: '#ff00ff',
   double: '#ffff00',
   
-  // Obstacles - orange/red
-  obstacle: '#ff6600',
-  obstacleDark: '#cc4400',
+  // Obstacles - varied colors
+  spike: '#ff3333',
+  laser: '#00ffff',
+  portal: '#ff00ff',
+  meteor: '#ff6600',
+  barrier: '#39ff14',
   
   // Effects
   glow: '#39ff14',
@@ -148,7 +175,7 @@ export const COLORS = {
 export const MODE_NAMES: Record<GameMode, string> = {
   original: 'CLASSIC',
   modified: 'POWER-UPS',
-  obstacles: 'OBSTACLES',
+  obstacles: 'SURVIVAL',
 };
 
 // Mode colors
@@ -156,4 +183,13 @@ export const MODE_COLORS: Record<GameMode, string> = {
   original: '#39ff14',
   modified: '#ff00ff',
   obstacles: '#ff6600',
+};
+
+// Obstacle descriptions for UI
+export const OBSTACLE_INFO: Record<ObstacleType, { name: string; desc: string; color: string }> = {
+  spike: { name: 'SPIKE', desc: 'Instant death', color: '#ff3333' },
+  laser: { name: 'LASER', desc: 'Toggles on/off', color: '#00ffff' },
+  portal: { name: 'PORTAL', desc: 'Teleports you', color: '#ff00ff' },
+  meteor: { name: 'METEOR', desc: 'Falls diagonally', color: '#ff6600' },
+  barrier: { name: 'BARRIER', desc: 'Moving wall', color: '#39ff14' },
 };

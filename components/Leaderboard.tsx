@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { GameMode } from '@/lib/game/types';
+import { GameMode, MODE_NAMES, MODE_COLORS } from '@/lib/game/types';
 
 interface LeaderboardEntry {
   id: string;
@@ -35,8 +35,9 @@ export default function Leaderboard({ gameMode, refreshTrigger }: LeaderboardPro
   }, [gameMode]);
 
   useEffect(() => {
+    setLoading(true);
     fetchLeaderboard();
-  }, [fetchLeaderboard, refreshTrigger]);
+  }, [fetchLeaderboard, refreshTrigger, gameMode]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -61,13 +62,28 @@ export default function Leaderboard({ gameMode, refreshTrigger }: LeaderboardPro
     }
   };
 
+  // Get mode-specific styling
+  const getModeColor = () => {
+    switch (gameMode) {
+      case 'original': return 'var(--neon-green)';
+      case 'modified': return 'var(--neon-magenta)';
+      case 'obstacles': return 'var(--neon-orange)';
+    }
+  };
+
   return (
     <div className="w-full arcade-panel p-4">
       <h2 className="font-pixel text-[10px] text-[var(--neon-cyan)] mb-3 flex items-center gap-2">
         <span className="text-lg">★</span>
         HIGH SCORES
-        <span className="font-retro text-xs text-gray-500 ml-auto">
-          {gameMode === 'original' ? 'CLASSIC' : 'POWER-UPS'}
+        <span 
+          className="font-pixel text-[8px] ml-auto px-2 py-0.5"
+          style={{ 
+            color: getModeColor(),
+            backgroundColor: `${getModeColor()}20`,
+          }}
+        >
+          {MODE_NAMES[gameMode]}
         </span>
       </h2>
       
@@ -81,7 +97,7 @@ export default function Leaderboard({ gameMode, refreshTrigger }: LeaderboardPro
         <p className="font-retro text-sm text-gray-500 text-center py-6">
           NO SCORES YET
           <br />
-          <span className="text-[var(--neon-green)]">BE THE FIRST!</span>
+          <span style={{ color: getModeColor() }}>BE THE FIRST!</span>
         </p>
       ) : (
         <div className="space-y-1">

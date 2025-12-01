@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { GameMode } from '@/lib/game/types';
+import { GameMode, MODE_NAMES } from '@/lib/game/types';
 import GameTabs from '@/components/GameTabs';
 import Leaderboard from '@/components/Leaderboard';
 import SessionScores from '@/components/SessionScores';
@@ -26,12 +27,25 @@ const GameCanvas = dynamic(() => import('@/components/GameCanvas'), {
 });
 
 export default function Home() {
-  const [gameMode, setGameMode] = useState<GameMode>('original');
+  const searchParams = useSearchParams();
+  
+  // Debug params: ?debug=start|playing|gameover&mode=original|modified|obstacles
+  const debugState = searchParams.get('debug') as 'start' | 'playing' | 'gameover' | null;
+  const debugMode = searchParams.get('mode') as GameMode | null;
+  
+  const [gameMode, setGameMode] = useState<GameMode>(debugMode || 'original');
   const [currentScore, setCurrentScore] = useState(0);
   const [showSubmit, setShowSubmit] = useState(false);
   const [scoreToSave, setScoreToSave] = useState<SessionScore | null>(null);
   const [leaderboardRefresh, setLeaderboardRefresh] = useState(0);
   const [sessionScores, setSessionScores] = useState<SessionScore[]>([]);
+
+  // Update mode from URL param
+  useEffect(() => {
+    if (debugMode && ['original', 'modified', 'obstacles'].includes(debugMode)) {
+      setGameMode(debugMode);
+    }
+  }, [debugMode]);
 
   const handleScoreChange = useCallback((score: number) => {
     setCurrentScore(score);
@@ -90,16 +104,16 @@ export default function Home() {
 
       <div className="relative z-10 min-h-screen p-4 md:p-6">
         {/* Header - Logo top left */}
-        <header className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <h1 className="font-pixel text-lg md:text-xl text-[var(--neon-green)] glow-green animate-flicker">
-              FLAPPY
-            </h1>
-            <h1 className="font-pixel text-lg md:text-xl text-[var(--neon-cyan)] glow-cyan">
-              BIRD
-            </h1>
+        <header className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <span className="font-pixel text-sm md:text-lg text-[var(--neon-green)] glow-green">
+              flappy
+            </span>
+            <span className="font-pixel text-sm md:text-lg text-[var(--neon-cyan)] glow-cyan">
+              2
+            </span>
           </div>
-          <div className="font-pixel text-[10px] text-[var(--neon-green)] opacity-60">
+          <div className="font-pixel text-[8px] text-[var(--neon-green)] opacity-60">
             INSERT COIN
           </div>
         </header>
@@ -107,49 +121,62 @@ export default function Home() {
         {/* Main Content */}
         <div className="flex flex-col lg:flex-row gap-6 items-start justify-center">
           {/* Left side - Game */}
-          <div className="flex flex-col items-center">
-            {/* Game Mode Tabs */}
-            <div className="mb-4">
-              <GameTabs activeMode={gameMode} onModeChange={setGameMode} />
+          <div className="flex flex-col items-center gap-4">
+            {/* Game Mode Tabs - Above game, no overlap */}
+            <GameTabs activeMode={gameMode} onModeChange={setGameMode} />
+
+            {/* Current Score Display - Separate from tabs */}
+            <div className="arcade-panel px-6 py-2">
+              <span className="font-pixel text-[8px] text-[var(--neon-cyan)]">SCORE </span>
+              <span className="font-pixel text-lg text-[var(--neon-green)] glow-green tabular-nums">{currentScore}</span>
             </div>
 
-            {/* Game Area */}
-            <div className="relative">
-              {/* Current Score Display */}
-              <div className="absolute -top-10 left-1/2 -translate-x-1/2 arcade-panel px-4 py-1 z-10">
-                <span className="font-pixel text-[10px] text-[var(--neon-cyan)]">SCORE </span>
-                <span className="font-pixel text-sm text-[var(--neon-green)] glow-green tabular-nums">{currentScore}</span>
-              </div>
+            {/* Game Canvas */}
+            <div className="crt-effect">
+              <GameCanvas
+                gameMode={gameMode}
+                onScoreChange={handleScoreChange}
+                onGameOver={(score) => handleGameOver(score, gameMode)}
+                debugState={debugState || undefined}
+              />
+            </div>
 
-              <div className="crt-effect">
-                <GameCanvas
-                  gameMode={gameMode}
-                  onScoreChange={handleScoreChange}
-                  onGameOver={(score) => handleGameOver(score, gameMode)}
-                />
-              </div>
-
-              {/* Power-ups legend for modified mode */}
-              {gameMode === 'modified' && (
-                <div className="mt-4 arcade-panel p-3">
-                  <div className="font-pixel text-[8px] text-[var(--neon-magenta)] mb-2 text-center">POWER-UPS</div>
-                  <div className="flex justify-center gap-4 font-retro text-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded bg-[var(--neon-cyan)] flex items-center justify-center text-black text-xs font-bold">S</span>
-                      <span className="text-[var(--neon-cyan)]">SHIELD</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded bg-[var(--neon-magenta)] flex items-center justify-center text-black text-xs font-bold">T</span>
-                      <span className="text-[var(--neon-magenta)]">SLOW</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded bg-[var(--neon-yellow)] flex items-center justify-center text-black text-xs font-bold">2</span>
-                      <span className="text-[var(--neon-yellow)]">×2</span>
-                    </div>
+            {/* Mode-specific info panel */}
+            {gameMode === 'modified' && (
+              <div className="arcade-panel p-3 w-full max-w-[400px]">
+                <div className="font-pixel text-[8px] text-[var(--neon-magenta)] mb-2 text-center">POWER-UPS</div>
+                <div className="flex justify-center gap-4 font-retro text-xs">
+                  <div className="flex items-center gap-1">
+                    <span className="w-4 h-4 rounded bg-[var(--neon-cyan)] flex items-center justify-center text-black text-[10px] font-bold">S</span>
+                    <span className="text-[var(--neon-cyan)]">SHIELD</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="w-4 h-4 rounded bg-[var(--neon-magenta)] flex items-center justify-center text-black text-[10px] font-bold">T</span>
+                    <span className="text-[var(--neon-magenta)]">SLOW</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="w-4 h-4 rounded bg-[var(--neon-yellow)] flex items-center justify-center text-black text-[10px] font-bold">2</span>
+                    <span className="text-[var(--neon-yellow)]">×2</span>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            )}
+
+            {gameMode === 'obstacles' && (
+              <div className="arcade-panel p-3 w-full max-w-[400px]">
+                <div className="font-pixel text-[8px] text-[var(--neon-orange)] mb-2 text-center">OBSTACLES</div>
+                <div className="flex justify-center gap-4 font-retro text-xs">
+                  <div className="flex items-center gap-1">
+                    <span className="w-4 h-4 rounded bg-[var(--neon-orange)] flex items-center justify-center text-black text-[10px] font-bold">↕</span>
+                    <span className="text-[var(--neon-orange)]">MOVING</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="w-4 h-4 rounded bg-[var(--neon-orange)] flex items-center justify-center text-black text-[10px] font-bold">⟳</span>
+                    <span className="text-[var(--neon-orange)]">ROTATING</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right side - Leaderboard & Session Scores */}
@@ -158,6 +185,7 @@ export default function Home() {
             <SessionScores 
               scores={sessionScores} 
               onSaveScore={handleSaveScore}
+              currentMode={gameMode}
             />
           </div>
         </div>
@@ -167,6 +195,12 @@ export default function Home() {
           <p className="font-pixel text-[8px] text-[var(--neon-green)] opacity-40">
             © 2025 ARCADE CLASSICS
           </p>
+          {/* Debug info - only shown with debug param */}
+          {debugState && (
+            <p className="font-pixel text-[8px] text-[var(--neon-magenta)] mt-2">
+              DEBUG: {debugState} | MODE: {gameMode}
+            </p>
+          )}
         </footer>
       </div>
 

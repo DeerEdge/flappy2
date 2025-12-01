@@ -6,9 +6,12 @@ import {
   Bird,
   PowerUp,
   PowerUpType,
+  Obstacle,
   DEFAULT_CONFIG,
   BIRD_CONFIG,
   COLORS,
+  MODE_NAMES,
+  MODE_COLORS,
 } from './types';
 
 export class FlappyEngine {
@@ -24,13 +27,38 @@ export class FlappyEngine {
     ctx: CanvasRenderingContext2D,
     gameMode: GameMode,
     onScoreChange?: (score: number) => void,
-    onGameOver?: (score: number) => void
+    onGameOver?: (score: number) => void,
+    debugState?: 'start' | 'playing' | 'gameover'
   ) {
     this.ctx = ctx;
     this.config = { ...DEFAULT_CONFIG };
     this.onScoreChange = onScoreChange;
     this.onGameOver = onGameOver;
     this.state = this.createInitialState(gameMode);
+    
+    // Debug mode setup
+    if (debugState) {
+      this.state.debugMode = true;
+      this.state.forcedState = debugState;
+      this.setupDebugState(debugState);
+    }
+  }
+
+  private setupDebugState(debugState: 'start' | 'playing' | 'gameover'): void {
+    switch (debugState) {
+      case 'playing':
+        this.state.isPlaying = true;
+        this.state.score = 5;
+        // Add some pipes
+        this.spawnPipe();
+        this.state.pipes[0].x = 200;
+        break;
+      case 'gameover':
+        this.state.gameOver = true;
+        this.state.score = 42;
+        this.state.highScore = 100;
+        break;
+    }
   }
 
   private createInitialState(gameMode: GameMode): GameState {
@@ -82,6 +110,10 @@ export class FlappyEngine {
     this.state.bird.velocity = this.config.flapStrength;
   }
 
+  public isGameOver(): boolean {
+    return this.state.gameOver;
+  }
+
   public setGameMode(mode: GameMode): void {
     this.state.gameMode = mode;
     this.reset();
@@ -121,8 +153,14 @@ export class FlappyEngine {
     const speedMod = this.getSpeedModifier();
     this.updateBird(speedMod);
     this.updatePipes(speedMod);
+    this.updateObstacles();
     
-    if (this.state.frameCount % this.config.pipeSpawnInterval === 0) {
+    // Spawn interval varies by mode
+    const spawnInterval = this.state.gameMode === 'obstacles' 
+      ? this.config.pipeSpawnInterval + 15 // Slightly slower for obstacles
+      : this.config.pipeSpawnInterval;
+    
+    if (this.state.frameCount % spawnInterval === 0) {
       this.spawnPipe();
     }
     
@@ -163,6 +201,32 @@ export class FlappyEngine {
     });
   }
 
+  private updateObstacles(): void {
+    for (const pipe of this.state.pipes) {
+      if (!pipe.obstacle) continue;
+      
+      const obs = pipe.obstacle;
+      
+      switch (obs.type) {
+        case 'moving':
+          if (obs.direction !== undefined && obs.speed !== undefined) {
+            obs.y += obs.direction * obs.speed;
+            if (obs.minY !== undefined && obs.maxY !== undefined) {
+              if (obs.y <= obs.minY || obs.y >= obs.maxY) {
+                obs.direction *= -1;
+              }
+            }
+          }
+          break;
+        case 'rotating':
+          if (obs.angle !== undefined && obs.rotationSpeed !== undefined) {
+            obs.angle += obs.rotationSpeed;
+          }
+          break;
+      }
+    }
+  }
+
   private spawnPipe(): void {
     const minHeight = 50;
     const maxHeight = this.config.canvasHeight - this.config.groundHeight - this.config.pipeGap - minHeight;
@@ -176,6 +240,7 @@ export class FlappyEngine {
       passed: false,
     };
     
+    // Power-ups for modified mode
     if (this.state.gameMode === 'modified' && Math.random() < 0.3) {
       const powerUpTypes: PowerUpType[] = ['shield', 'slowmo', 'double'];
       const type = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
@@ -190,6 +255,38 @@ export class FlappyEngine {
       };
     }
     
+    // Obstacles for obstacles mode
+    if (this.state.gameMode === 'obstacles' && Math.random() < 0.5) {
+      const obstacleTypes: Array<'moving' | 'rotating'> = ['moving', 'rotating'];
+      const type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+      
+      const gapCenterY = topHeight + this.config.pipeGap / 2;
+      
+      if (type === 'moving') {
+        pipe.obstacle = {
+          type: 'moving',
+          x: pipe.x + pipe.width / 2 - 15,
+          y: gapCenterY - 10,
+          width: 30,
+          height: 20,
+          direction: Math.random() > 0.5 ? 1 : -1,
+          speed: 1.5,
+          minY: topHeight + 20,
+          maxY: pipe.bottomY - 40,
+        };
+      } else {
+        pipe.obstacle = {
+          type: 'rotating',
+          x: pipe.x + pipe.width / 2,
+          y: gapCenterY,
+          width: 40,
+          height: 8,
+          angle: 0,
+          rotationSpeed: 0.05,
+        };
+      }
+    }
+    
     this.state.pipes.push(pipe);
   }
 
@@ -197,9 +294,19 @@ export class FlappyEngine {
     const bird = this.state.bird;
     
     for (const pipe of this.state.pipes) {
+      // Power-up collection (modified mode)
       if (pipe.powerUp && !pipe.powerUp.collected) {
         if (this.checkPowerUpCollision(bird, pipe.powerUp)) {
           this.collectPowerUp(pipe.powerUp);
+          continue; // Don't check pipe collision after collecting power-up
+        }
+      }
+      
+      // Obstacle collision (obstacles mode)
+      if (pipe.obstacle) {
+        if (this.checkObstacleCollision(bird, pipe.obstacle)) {
+          this.handleCollision();
+          return;
         }
       }
       
@@ -210,6 +317,7 @@ export class FlappyEngine {
         height: bird.height - 8,
       };
       
+      // Top pipe collision
       if (
         birdBox.x < pipe.x + pipe.width &&
         birdBox.x + birdBox.width > pipe.x &&
@@ -219,6 +327,7 @@ export class FlappyEngine {
         return;
       }
       
+      // Bottom pipe collision
       if (
         birdBox.x < pipe.x + pipe.width &&
         birdBox.x + birdBox.width > pipe.x &&
@@ -228,6 +337,40 @@ export class FlappyEngine {
         return;
       }
     }
+  }
+
+  private checkObstacleCollision(bird: Bird, obstacle: Obstacle): boolean {
+    const birdBox = {
+      x: bird.x + 4,
+      y: bird.y + 4,
+      width: bird.width - 8,
+      height: bird.height - 8,
+    };
+    
+    if (obstacle.type === 'rotating' && obstacle.angle !== undefined) {
+      // For rotating obstacles, use a circular hitbox
+      const centerX = obstacle.x;
+      const centerY = obstacle.y;
+      const radius = obstacle.width / 2;
+      
+      const birdCenterX = birdBox.x + birdBox.width / 2;
+      const birdCenterY = birdBox.y + birdBox.height / 2;
+      const birdRadius = Math.min(birdBox.width, birdBox.height) / 2;
+      
+      const dx = birdCenterX - centerX;
+      const dy = birdCenterY - centerY;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      
+      return distance < radius + birdRadius;
+    }
+    
+    // AABB collision for moving obstacles
+    return (
+      birdBox.x < obstacle.x + obstacle.width &&
+      birdBox.x + birdBox.width > obstacle.x &&
+      birdBox.y < obstacle.y + obstacle.height &&
+      birdBox.y + birdBox.height > obstacle.y
+    );
   }
 
   private checkPowerUpCollision(bird: Bird, powerUp: PowerUp): boolean {
@@ -329,7 +472,11 @@ export class FlappyEngine {
     this.renderPipes();
     this.renderGround();
     this.renderBird();
-    this.renderScore();
+    
+    // Only render score during gameplay (not on start/end screens)
+    if (this.state.isPlaying && !this.state.gameOver) {
+      this.renderScore();
+    }
     
     if (this.state.gameMode === 'modified') {
       this.renderPowerUpIndicators();
@@ -344,9 +491,8 @@ export class FlappyEngine {
 
   private renderStars(): void {
     const ctx = this.ctx;
-    const { canvasWidth, canvasHeight, groundHeight } = this.config;
+    const { canvasHeight, groundHeight } = this.config;
     
-    // Pseudo-random stars based on frame
     ctx.fillStyle = '#ffffff';
     const starPositions = [
       [50, 30], [120, 80], [200, 45], [280, 100], [350, 60],
@@ -369,7 +515,6 @@ export class FlappyEngine {
     ctx.strokeStyle = 'rgba(57, 255, 20, 0.05)';
     ctx.lineWidth = 1;
     
-    // Vertical lines
     for (let x = 0; x < canvasWidth; x += 40) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
@@ -377,7 +522,6 @@ export class FlappyEngine {
       ctx.stroke();
     }
     
-    // Horizontal lines
     for (let y = 0; y < canvasHeight - groundHeight; y += 40) {
       ctx.beginPath();
       ctx.moveTo(0, y);
@@ -400,6 +544,10 @@ export class FlappyEngine {
       if (pipe.powerUp && !pipe.powerUp.collected) {
         this.renderPowerUp(pipe.powerUp);
       }
+      
+      if (pipe.obstacle) {
+        this.renderObstacle(pipe.obstacle);
+      }
     }
   }
 
@@ -412,7 +560,7 @@ export class FlappyEngine {
     ctx.shadowColor = COLORS.pipe;
     ctx.shadowBlur = 10;
     
-    // Main pipe body - solid neon with border
+    // Main pipe body
     ctx.fillStyle = '#1a3d1a';
     ctx.fillRect(x + 2, y, width - 4, height);
     
@@ -439,13 +587,57 @@ export class FlappyEngine {
     ctx.shadowBlur = 0;
   }
 
+  private renderObstacle(obstacle: Obstacle): void {
+    const ctx = this.ctx;
+    
+    ctx.save();
+    
+    ctx.shadowColor = COLORS.obstacle;
+    ctx.shadowBlur = 15;
+    
+    if (obstacle.type === 'rotating' && obstacle.angle !== undefined) {
+      ctx.translate(obstacle.x, obstacle.y);
+      ctx.rotate(obstacle.angle);
+      
+      // Rotating bar
+      ctx.fillStyle = COLORS.obstacle;
+      ctx.fillRect(-obstacle.width / 2, -obstacle.height / 2, obstacle.width, obstacle.height);
+      
+      ctx.strokeStyle = COLORS.obstacleDark;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(-obstacle.width / 2, -obstacle.height / 2, obstacle.width, obstacle.height);
+      
+      // Center circle
+      ctx.beginPath();
+      ctx.arc(0, 0, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fill();
+    } else {
+      // Moving obstacle
+      ctx.fillStyle = COLORS.obstacle;
+      ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+      
+      ctx.strokeStyle = COLORS.obstacleDark;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+      
+      // Warning stripes
+      ctx.fillStyle = '#000000';
+      for (let i = 0; i < obstacle.width; i += 10) {
+        ctx.fillRect(obstacle.x + i, obstacle.y, 5, obstacle.height);
+      }
+    }
+    
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+
   private renderPowerUp(powerUp: PowerUp): void {
     const ctx = this.ctx;
     const { x, y, width, height, type } = powerUp;
     const centerX = x + width / 2;
     const centerY = y + height / 2;
     
-    // Pulsing glow
     const pulse = Math.sin(this.state.frameCount * 0.15) * 0.3 + 0.7;
     
     ctx.shadowColor = COLORS[type];
@@ -487,7 +679,6 @@ export class FlappyEngine {
     const { canvasWidth, canvasHeight, groundHeight } = this.config;
     const groundY = canvasHeight - groundHeight;
     
-    // Ground base
     ctx.fillStyle = COLORS.ground;
     ctx.fillRect(0, groundY, canvasWidth, groundHeight);
     
@@ -498,7 +689,7 @@ export class FlappyEngine {
     ctx.fillRect(0, groundY, canvasWidth, 4);
     ctx.shadowBlur = 0;
     
-    // Grid pattern on ground
+    // Grid pattern
     ctx.strokeStyle = COLORS.groundLight;
     ctx.lineWidth = 1;
     for (let i = 0; i < canvasWidth; i += 20) {
@@ -535,13 +726,12 @@ export class FlappyEngine {
     ctx.shadowColor = COLORS.bird;
     ctx.shadowBlur = 8;
     
-    // Bird body - pixel-ish style
+    // Bird body
     ctx.fillStyle = COLORS.bird;
     ctx.beginPath();
     ctx.ellipse(0, 0, bird.width / 2, bird.height / 2, 0, 0, Math.PI * 2);
     ctx.fill();
     
-    // Border
     ctx.strokeStyle = COLORS.birdDark;
     ctx.lineWidth = 2;
     ctx.stroke();
@@ -581,7 +771,6 @@ export class FlappyEngine {
   private renderScore(): void {
     const ctx = this.ctx;
     
-    // Retro pixel-style score
     ctx.shadowColor = COLORS.text;
     ctx.shadowBlur = 10;
     
@@ -589,12 +778,10 @@ export class FlappyEngine {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     
-    // Outline
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 4;
     ctx.strokeText(this.state.score.toString(), this.config.canvasWidth / 2, 50);
     
-    // Fill
     ctx.fillStyle = COLORS.text;
     ctx.fillText(this.state.score.toString(), this.config.canvasWidth / 2, 50);
     
@@ -612,16 +799,13 @@ export class FlappyEngine {
       ctx.shadowColor = COLORS[powerUp.type];
       ctx.shadowBlur = 8;
       
-      // Background
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
       ctx.fillRect(offsetX, 10, 30, 30);
       
-      // Border
       ctx.strokeStyle = COLORS[powerUp.type];
       ctx.lineWidth = 2;
       ctx.strokeRect(offsetX, 10, 30, 30);
       
-      // Timer text
       ctx.fillStyle = COLORS[powerUp.type];
       ctx.font = 'bold 10px monospace';
       ctx.textAlign = 'center';
@@ -631,7 +815,6 @@ export class FlappyEngine {
       offsetX += 35;
     }
     
-    // Shield indicator
     if (this.state.hasShield) {
       ctx.shadowColor = COLORS.shield;
       ctx.shadowBlur = 8;
@@ -660,35 +843,53 @@ export class FlappyEngine {
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
     
+    const modeColor = MODE_COLORS[this.state.gameMode];
+    const modeName = MODE_NAMES[this.state.gameMode];
+    
     // Title with glow
-    ctx.shadowColor = COLORS.text;
+    ctx.shadowColor = modeColor;
     ctx.shadowBlur = 20;
     
     ctx.font = 'bold 28px monospace';
     ctx.textAlign = 'center';
-    ctx.fillStyle = COLORS.text;
-    ctx.fillText('FLAPPY BIRD', canvasWidth / 2, canvasHeight / 3);
+    ctx.fillStyle = modeColor;
+    ctx.fillText('FLAPPY BIRD', canvasWidth / 2, canvasHeight / 3 - 20);
     
     // Mode indicator
-    ctx.shadowColor = this.state.gameMode === 'original' ? COLORS.textCyan : COLORS.textMagenta;
-    ctx.font = 'bold 16px monospace';
-    const modeText = this.state.gameMode === 'original' ? 'CLASSIC' : 'POWER-UPS';
-    ctx.fillStyle = this.state.gameMode === 'original' ? COLORS.textCyan : COLORS.textMagenta;
-    ctx.fillText(modeText, canvasWidth / 2, canvasHeight / 3 + 35);
+    ctx.font = 'bold 18px monospace';
+    ctx.fillText(modeName, canvasWidth / 2, canvasHeight / 3 + 20);
     
     ctx.shadowBlur = 0;
+    
+    // Mode-specific info
+    ctx.font = '12px monospace';
+    ctx.fillStyle = '#888888';
+    
+    switch (this.state.gameMode) {
+      case 'original':
+        ctx.fillText('The classic experience', canvasWidth / 2, canvasHeight / 2 - 20);
+        break;
+      case 'modified':
+        ctx.fillText('Collect power-ups!', canvasWidth / 2, canvasHeight / 2 - 20);
+        ctx.fillText('Shield • Slow-Mo • 2x Points', canvasWidth / 2, canvasHeight / 2);
+        break;
+      case 'obstacles':
+        ctx.fillText('Dodge moving obstacles!', canvasWidth / 2, canvasHeight / 2 - 20);
+        ctx.fillText('Watch for rotating bars', canvasWidth / 2, canvasHeight / 2);
+        break;
+    }
     
     // Blinking instruction
     if (Math.floor(this.state.frameCount / 30) % 2 === 0) {
       ctx.font = '14px monospace';
-      ctx.fillStyle = COLORS.text;
-      ctx.fillText('PRESS SPACE TO START', canvasWidth / 2, canvasHeight / 2 + 20);
+      ctx.fillStyle = modeColor;
+      ctx.fillText('TAP OR PRESS SPACE', canvasWidth / 2, canvasHeight / 2 + 60);
     }
     
     // Controls hint
-    ctx.font = '12px monospace';
-    ctx.fillStyle = '#666666';
-    ctx.fillText('SPACE / TAP TO FLAP', canvasWidth / 2, canvasHeight / 2 + 60);
+    ctx.font = '10px monospace';
+    ctx.fillStyle = '#555555';
+    ctx.fillText('SPACE / CLICK / TAP TO FLAP', canvasWidth / 2, canvasHeight / 2 + 100);
   }
 
   private renderGameOver(): void {
@@ -696,42 +897,78 @@ export class FlappyEngine {
     const { canvasWidth, canvasHeight } = this.config;
     
     // Dark overlay
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.85)';
     ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+    
+    const modeColor = MODE_COLORS[this.state.gameMode];
+    const modeName = MODE_NAMES[this.state.gameMode];
     
     // Game Over with red glow
     ctx.shadowColor = '#ff0000';
     ctx.shadowBlur = 20;
     
-    ctx.font = 'bold 32px monospace';
+    ctx.font = 'bold 36px monospace';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#ff4444';
-    ctx.fillText('GAME OVER', canvasWidth / 2, canvasHeight / 3);
+    ctx.fillText('GAME OVER', canvasWidth / 2, canvasHeight / 4);
     
     ctx.shadowBlur = 0;
     
-    // Score box
-    ctx.strokeStyle = COLORS.text;
-    ctx.lineWidth = 2;
-    ctx.strokeRect(canvasWidth / 2 - 80, canvasHeight / 2 - 50, 160, 80);
+    // Mode badge
+    ctx.shadowColor = modeColor;
+    ctx.shadowBlur = 10;
+    ctx.font = 'bold 12px monospace';
+    ctx.fillStyle = modeColor;
+    ctx.fillText(modeName, canvasWidth / 2, canvasHeight / 4 + 35);
+    ctx.shadowBlur = 0;
     
-    // Scores
-    ctx.font = 'bold 16px monospace';
-    ctx.fillStyle = COLORS.textCyan;
-    ctx.fillText('SCORE', canvasWidth / 2, canvasHeight / 2 - 25);
-    ctx.fillStyle = COLORS.text;
-    ctx.font = 'bold 24px monospace';
-    ctx.fillText(this.state.score.toString(), canvasWidth / 2, canvasHeight / 2);
+    // Score panel
+    const panelY = canvasHeight / 2 - 60;
+    ctx.strokeStyle = modeColor;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(canvasWidth / 2 - 100, panelY, 200, 120);
     
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    ctx.fillRect(canvasWidth / 2 - 100, panelY, 200, 120);
+    
+    // Score label
+    ctx.font = 'bold 14px monospace';
+    ctx.fillStyle = '#888888';
+    ctx.fillText('SCORE', canvasWidth / 2, panelY + 30);
+    
+    // Score value
+    ctx.shadowColor = modeColor;
+    ctx.shadowBlur = 10;
+    ctx.font = 'bold 40px monospace';
+    ctx.fillStyle = modeColor;
+    ctx.fillText(this.state.score.toString(), canvasWidth / 2, panelY + 70);
+    ctx.shadowBlur = 0;
+    
+    // Best score
     ctx.font = '12px monospace';
     ctx.fillStyle = COLORS.textYellow;
-    ctx.fillText(`BEST: ${this.state.highScore}`, canvasWidth / 2, canvasHeight / 2 + 25);
+    ctx.fillText(`BEST: ${this.state.highScore}`, canvasWidth / 2, panelY + 100);
     
     // Blinking restart
     if (Math.floor(this.state.frameCount / 30) % 2 === 0) {
       ctx.font = '14px monospace';
-      ctx.fillStyle = COLORS.text;
-      ctx.fillText('PRESS SPACE TO RETRY', canvasWidth / 2, canvasHeight / 2 + 80);
+      ctx.fillStyle = modeColor;
+      ctx.fillText('TAP TO RETRY', canvasWidth / 2, canvasHeight / 2 + 100);
+    }
+    
+    // Tip based on mode
+    ctx.font = '10px monospace';
+    ctx.fillStyle = '#555555';
+    switch (this.state.gameMode) {
+      case 'original':
+        ctx.fillText('Tip: Tap gently for small hops', canvasWidth / 2, canvasHeight / 2 + 140);
+        break;
+      case 'modified':
+        ctx.fillText('Tip: Shield absorbs one hit', canvasWidth / 2, canvasHeight / 2 + 140);
+        break;
+      case 'obstacles':
+        ctx.fillText('Tip: Time your flaps with obstacles', canvasWidth / 2, canvasHeight / 2 + 140);
+        break;
     }
   }
 }

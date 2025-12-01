@@ -7,6 +7,7 @@
   --neon-cyan: #00ffff;
   --neon-magenta: #ff00ff;
   --neon-yellow: #ffff00;
+  --neon-orange: #ff6600;
   --arcade-dark: #1a1a2e;
   --arcade-purple: #16213e;
 }
@@ -73,6 +74,10 @@ body::before {
   text-shadow: 0 0 5px var(--neon-yellow), 0 0 10px var(--neon-yellow), 0 0 20px var(--neon-yellow);
 }
 
+.glow-orange {
+  text-shadow: 0 0 5px var(--neon-orange), 0 0 10px var(--neon-orange), 0 0 20px var(--neon-orange);
+}
+
 /* Box glow effects */
 .box-glow-green {
   box-shadow: 0 0 5px var(--neon-green), 0 0 10px var(--neon-green), inset 0 0 5px rgba(57, 255, 20, 0.1);
@@ -84,6 +89,10 @@ body::before {
 
 .box-glow-magenta {
   box-shadow: 0 0 5px var(--neon-magenta), 0 0 10px var(--neon-magenta), inset 0 0 5px rgba(255, 0, 255, 0.1);
+}
+
+.box-glow-orange {
+  box-shadow: 0 0 5px var(--neon-orange), 0 0 10px var(--neon-orange), inset 0 0 5px rgba(255, 102, 0, 0.1);
 }
 
 /* Retro selection */
@@ -177,6 +186,15 @@ body::before {
 
 .arcade-btn-magenta:hover {
   box-shadow: 0 0 10px var(--neon-magenta), 0 0 20px var(--neon-magenta);
+}
+
+.arcade-btn-orange {
+  border-color: var(--neon-orange);
+  color: var(--neon-orange);
+}
+
+.arcade-btn-orange:hover {
+  box-shadow: 0 0 10px var(--neon-orange), 0 0 20px var(--neon-orange);
 }
 
 /* Arcade panel style */

@@ -1,6 +1,8 @@
-export type GameMode = 'original' | 'modified';
+export type GameMode = 'original' | 'modified' | 'obstacles';
 
 export type PowerUpType = 'shield' | 'slowmo' | 'double';
+
+export type ObstacleType = 'moving' | 'shrinking' | 'rotating';
 
 export interface PowerUp {
   type: PowerUpType;
@@ -16,6 +18,22 @@ export interface ActivePowerUp {
   endTime: number;
 }
 
+export interface Obstacle {
+  type: ObstacleType;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  // For moving obstacles
+  direction?: number;
+  speed?: number;
+  minY?: number;
+  maxY?: number;
+  // For rotating obstacles
+  angle?: number;
+  rotationSpeed?: number;
+}
+
 export interface Pipe {
   x: number;
   topHeight: number;
@@ -23,6 +41,7 @@ export interface Pipe {
   width: number;
   passed: boolean;
   powerUp?: PowerUp;
+  obstacle?: Obstacle;
 }
 
 export interface Bird {
@@ -45,6 +64,9 @@ export interface GameState {
   gameMode: GameMode;
   activePowerUps: ActivePowerUp[];
   hasShield: boolean;
+  // Debug state
+  debugMode?: boolean;
+  forcedState?: 'start' | 'playing' | 'gameover';
 }
 
 export interface GameConfig {
@@ -107,12 +129,31 @@ export const COLORS = {
   textCyan: '#00ffff',
   textMagenta: '#ff00ff',
   textYellow: '#ffff00',
+  textOrange: '#ff6600',
   
   // Power-ups - neon colors
   shield: '#00ffff',
   slowmo: '#ff00ff',
   double: '#ffff00',
   
+  // Obstacles - orange/red
+  obstacle: '#ff6600',
+  obstacleDark: '#cc4400',
+  
   // Effects
   glow: '#39ff14',
+};
+
+// Mode display names
+export const MODE_NAMES: Record<GameMode, string> = {
+  original: 'CLASSIC',
+  modified: 'POWER-UPS',
+  obstacles: 'OBSTACLES',
+};
+
+// Mode colors
+export const MODE_COLORS: Record<GameMode, string> = {
+  original: '#39ff14',
+  modified: '#ff00ff',
+  obstacles: '#ff6600',
 };

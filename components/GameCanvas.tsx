@@ -8,21 +8,30 @@ interface GameCanvasProps {
   gameMode: GameMode;
   onScoreChange: (score: number) => void;
   onGameOver: (score: number) => void;
+  debugState?: 'start' | 'playing' | 'gameover';
 }
 
-export default function GameCanvas({ gameMode, onScoreChange, onGameOver }: GameCanvasProps) {
+export default function GameCanvas({ 
+  gameMode, 
+  onScoreChange, 
+  onGameOver,
+  debugState 
+}: GameCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<FlappyEngine | null>(null);
 
-  const handleFlap = useCallback(() => {
-    if (engineRef.current) {
-      const state = engineRef.current.getState();
-      if (state.gameOver) {
-        engineRef.current.reset();
-        onScoreChange(0);
-      }
-      engineRef.current.flap();
+  const handleInteraction = useCallback(() => {
+    if (!engineRef.current) return;
+    
+    const state = engineRef.current.getState();
+    
+    if (state.gameOver) {
+      // Reset and start fresh
+      engineRef.current.reset();
+      onScoreChange(0);
     }
+    
+    engineRef.current.flap();
   }, [onScoreChange]);
 
   useEffect(() => {
@@ -32,15 +41,15 @@ export default function GameCanvas({ gameMode, onScoreChange, onGameOver }: Game
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Initialize engine
-    engineRef.current = new FlappyEngine(ctx, gameMode, onScoreChange, onGameOver);
+    // Initialize engine with optional debug state
+    engineRef.current = new FlappyEngine(ctx, gameMode, onScoreChange, onGameOver, debugState);
     engineRef.current.render();
 
     // Keyboard handler
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space' || e.key === ' ') {
         e.preventDefault();
-        handleFlap();
+        handleInteraction();
       }
     };
 
@@ -52,7 +61,7 @@ export default function GameCanvas({ gameMode, onScoreChange, onGameOver }: Game
         engineRef.current.destroy();
       }
     };
-  }, [gameMode, onScoreChange, onGameOver, handleFlap]);
+  }, [gameMode, onScoreChange, onGameOver, handleInteraction, debugState]);
 
   // Handle game mode changes
   useEffect(() => {
@@ -67,10 +76,10 @@ export default function GameCanvas({ gameMode, onScoreChange, onGameOver }: Game
       ref={canvasRef}
       width={DEFAULT_CONFIG.canvasWidth}
       height={DEFAULT_CONFIG.canvasHeight}
-      onClick={handleFlap}
+      onClick={handleInteraction}
       onTouchStart={(e) => {
         e.preventDefault();
-        handleFlap();
+        handleInteraction();
       }}
       className="cursor-pointer border-4 border-[var(--neon-green)] box-glow-green"
       style={{ touchAction: 'none' }}

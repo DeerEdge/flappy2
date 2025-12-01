@@ -49,15 +49,19 @@ export class FlappyEngine {
       case 'playing':
         this.state.isPlaying = true;
         this.state.score = 5;
+        this.state.frameCount = 100; // For blinking text
         // Add some pipes
         this.spawnPipe();
         this.state.pipes[0].x = 200;
         break;
       case 'gameover':
         this.state.gameOver = true;
+        this.state.isPlaying = false;
         this.state.score = 42;
         this.state.highScore = 100;
+        this.state.frameCount = 100; // For blinking text
         break;
+      // 'start' is default state, no changes needed
     }
   }
 

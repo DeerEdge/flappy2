@@ -21,7 +21,22 @@ const METRICS_ID = '00000000-0000-0000-0000-000000000001';
 
 export async function GET() {
   try {
-    const client = getSupabaseClient();
+    let client;
+    try {
+      client = getSupabaseClient();
+    } catch {
+      // Return default metrics if Supabase is not configured
+      return NextResponse.json({ 
+        metrics: {
+          totalGamesPlayed: 0,
+          totalPlayTime: 0,
+          gamesByMode: { original: 0, modified: 0, obstacles: 0 },
+          highScoreByMode: { original: 0, modified: 0, obstacles: 0 },
+          avgScoreByMode: { original: 0, modified: 0, obstacles: 0 },
+          longestSurvival: 0,
+        }
+      });
+    }
     const { data, error } = await client
       .from('global_metrics')
       .select('*')

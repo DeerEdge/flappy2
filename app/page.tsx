@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import { GameMode, MODE_NAMES } from '@/lib/game/types';
@@ -26,7 +26,7 @@ const GameCanvas = dynamic(() => import('@/components/GameCanvas'), {
   ),
 });
 
-export default function Home() {
+function GameContent() {
   const searchParams = useSearchParams();
   
   // Debug params: ?debug=start|playing|gameover&mode=original|modified|obstacles
@@ -81,27 +81,7 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-[var(--background)] relative overflow-hidden">
-      {/* Background grid effect */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-10">
-        <div 
-          className="absolute inset-0" 
-          style={{
-            backgroundImage: `
-              linear-gradient(var(--neon-green) 1px, transparent 1px),
-              linear-gradient(90deg, var(--neon-green) 1px, transparent 1px)
-            `,
-            backgroundSize: '50px 50px',
-          }}
-        />
-      </div>
-
-      {/* Neon glow decorations */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[var(--neon-green)] opacity-5 rounded-full blur-[100px]" />
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[var(--neon-cyan)] opacity-5 rounded-full blur-[100px]" />
-      </div>
-
+    <>
       <div className="relative z-10 min-h-screen p-4 md:p-6">
         {/* Header - Logo top left */}
         <header className="flex items-center justify-between mb-4">
@@ -216,6 +196,40 @@ export default function Home() {
           }}
         />
       )}
+    </>
+  );
+}
+
+export default function Home() {
+  return (
+    <main className="min-h-screen bg-[var(--background)] relative overflow-hidden">
+      {/* Background grid effect */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-10">
+        <div 
+          className="absolute inset-0" 
+          style={{
+            backgroundImage: `
+              linear-gradient(var(--neon-green) 1px, transparent 1px),
+              linear-gradient(90deg, var(--neon-green) 1px, transparent 1px)
+            `,
+            backgroundSize: '50px 50px',
+          }}
+        />
+      </div>
+
+      {/* Neon glow decorations */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-[var(--neon-green)] opacity-5 rounded-full blur-[100px]" />
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-[var(--neon-cyan)] opacity-5 rounded-full blur-[100px]" />
+      </div>
+
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="font-pixel text-[var(--neon-green)] text-sm animate-pulse-neon">LOADING...</div>
+        </div>
+      }>
+        <GameContent />
+      </Suspense>
     </main>
   );
 }

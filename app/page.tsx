@@ -3,16 +3,12 @@
 import { useState, useCallback, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { GameMode } from '@/lib/game/types';
 import GameTabs from '@/components/GameTabs';
 import Leaderboard from '@/components/Leaderboard';
 import SessionScores from '@/components/SessionScores';
 import ScoreSubmit from '@/components/ScoreSubmit';
-import PlayerMetrics, { 
-  PlayerMetricsData, 
-  createEmptyMetrics, 
-  updateMetricsOnGameOver 
-} from '@/components/PlayerMetrics';
 
 interface SessionScore {
   id: string;
@@ -43,7 +39,6 @@ function GameContent() {
   const [scoreToSave, setScoreToSave] = useState<SessionScore | null>(null);
   const [leaderboardRefresh, setLeaderboardRefresh] = useState(0);
   const [sessionScores, setSessionScores] = useState<SessionScore[]>([]);
-  const [metrics, setMetrics] = useState<PlayerMetricsData>(createEmptyMetrics);
   const gameStartTime = useRef<number>(Date.now());
 
   // Update mode from URL param
@@ -53,16 +48,19 @@ function GameContent() {
     }
   }, [debugMode]);
 
-  // Track game start time when game starts
-  const handleGameStart = useCallback(() => {
-    gameStartTime.current = Date.now();
-  }, []);
-
-  const handleGameOver = useCallback((score: number, mode: GameMode) => {
+  const handleGameOver = useCallback(async (score: number, mode: GameMode) => {
     const playTime = (Date.now() - gameStartTime.current) / 1000;
     
-    // Update metrics
-    setMetrics(prev => updateMetricsOnGameOver(prev, score, mode, playTime));
+    // Update global metrics in database
+    try {
+      await fetch('/api/metrics', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ score, game_mode: mode, play_time: playTime }),
+      });
+    } catch (error) {
+      console.error('Failed to update metrics:', error);
+    }
     
     if (score > 0) {
       const newScore: SessionScore = {
@@ -98,7 +96,7 @@ function GameContent() {
   return (
     <>
       <div className="relative z-10 min-h-screen p-4 md:p-6">
-        {/* Header - Logo top left */}
+        {/* Header with navigation */}
         <header className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <span className="font-pixel text-sm md:text-lg text-[var(--neon-green)] glow-green">
@@ -108,9 +106,18 @@ function GameContent() {
               2
             </span>
           </div>
-          <div className="font-pixel text-[8px] text-[var(--neon-green)] opacity-60">
-            INSERT COIN
-          </div>
+          
+          {/* Navigation */}
+          <nav className="flex gap-2">
+            <button className="arcade-panel px-4 py-2 font-pixel text-xs bg-[var(--neon-green)] text-black">
+              PLAY!
+            </button>
+            <Link href="/metrics">
+              <button className="arcade-panel px-4 py-2 font-pixel text-xs text-[var(--neon-cyan)] hover:bg-[var(--neon-cyan)] hover:text-black transition-colors">
+                METRICS
+              </button>
+            </Link>
+          </nav>
         </header>
 
         {/* Main Content */}
@@ -182,7 +189,7 @@ function GameContent() {
             )}
           </div>
 
-          {/* Right side - Leaderboard, Session Scores & Metrics */}
+          {/* Right side - Leaderboard & Session Scores */}
           <div className="flex flex-col gap-4 w-full max-w-sm">
             <Leaderboard gameMode={gameMode} refreshTrigger={leaderboardRefresh} />
             <SessionScores 
@@ -190,7 +197,6 @@ function GameContent() {
               onSaveScore={handleSaveScore}
               currentMode={gameMode}
             />
-            <PlayerMetrics metrics={metrics} currentMode={gameMode} />
           </div>
         </div>
 

@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid score' }, { status: 400 });
     }
 
-    if (!['original', 'modified'].includes(game_mode)) {
+    if (!['original', 'modified', 'obstacles'].includes(game_mode)) {
       return NextResponse.json({ error: 'Invalid game mode' }, { status: 400 });
     }
 

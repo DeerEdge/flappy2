@@ -227,8 +227,15 @@ export class FlappyEngine {
 
   // ========== OBSTACLES MODE ==========
   
+  private getDifficultyMultiplier(): number {
+    // Difficulty increases over time - starts at 1.0, maxes at 2.0 after 60 seconds
+    const survivalTime = this.state.score; // Score = seconds survived
+    return Math.min(1 + (survivalTime / 60), 2.0);
+  }
+  
   private updateObstaclesMode(speedMod: number): void {
-    const speed = this.config.pipeSpeed * speedMod;
+    const difficulty = this.getDifficultyMultiplier();
+    const speed = this.config.pipeSpeed * speedMod * difficulty;
     
     // Update existing obstacles
     this.state.obstacles = this.state.obstacles.filter(obs => {
@@ -239,7 +246,7 @@ export class FlappyEngine {
           this.updateLaser(obs);
           break;
         case 'meteor':
-          this.updateMeteor(obs, speedMod);
+          this.updateMeteor(obs, speedMod * difficulty);
           break;
         case 'barrier':
           this.updateBarrier(obs);
@@ -249,9 +256,12 @@ export class FlappyEngine {
       return obs.x + obs.width > -50;
     });
     
-    // Spawn new obstacles - slower spawn rate for easier gameplay
+    // Spawn new obstacles - spawn rate increases with difficulty
     this.lastObstacleSpawn++;
-    const spawnInterval = 120 + Math.random() * 60; // Longer intervals between obstacles
+    const baseInterval = 100;
+    const minInterval = 50;
+    const spawnInterval = Math.max(minInterval, baseInterval / difficulty) + Math.random() * 30;
+    
     if (this.lastObstacleSpawn > spawnInterval) {
       this.spawnObstacle();
       this.lastObstacleSpawn = 0;
@@ -292,22 +302,32 @@ export class FlappyEngine {
   }
 
   private spawnObstacle(): void {
-    const types: ObstacleType[] = ['spike', 'laser', 'portal', 'meteor', 'barrier'];
-    const type = types[Math.floor(Math.random() * types.length)];
+    // Weighted obstacle types - spikes are more common
+    const weightedTypes: ObstacleType[] = [
+      'spike', 'spike', 'spike', // 3x weight for spikes
+      'laser', 'laser',          // 2x weight for lasers  
+      'portal',                   // 1x weight
+      'meteor', 'meteor',        // 2x weight for meteors
+      'barrier'                   // 1x weight
+    ];
+    const type = weightedTypes[Math.floor(Math.random() * weightedTypes.length)];
     
     const groundY = this.config.canvasHeight - this.config.groundHeight;
+    const difficulty = this.getDifficultyMultiplier();
     
     let obstacle: Obstacle;
     
     switch (type) {
       case 'spike':
         const onGround = Math.random() > 0.5;
+        // Spikes get bigger with difficulty
+        const spikeSize = Math.min(30 + (difficulty - 1) * 15, 45);
         obstacle = {
           type: 'spike',
           x: this.config.canvasWidth,
-          y: onGround ? groundY - 30 : 0, // Smaller spikes
-          width: 30,
-          height: 30,
+          y: onGround ? groundY - spikeSize : 0,
+          width: spikeSize,
+          height: spikeSize,
           active: true,
           passed: false,
           position: onGround ? 'ground' : 'ceiling',
@@ -316,15 +336,18 @@ export class FlappyEngine {
         
       case 'laser':
         const laserY = 100 + Math.random() * (groundY - 200);
+        // Lasers get wider and toggle faster with difficulty
+        const laserWidth = Math.min(80 + (difficulty - 1) * 40, 140);
+        const laserOnTime = Math.max(90 - (difficulty - 1) * 20, 50);
         obstacle = {
           type: 'laser',
           x: this.config.canvasWidth,
           y: laserY,
-          width: 80,
+          width: laserWidth,
           height: 8,
           active: true,
           passed: false,
-          onTime: 90,
+          onTime: laserOnTime,
           offTime: 60,
           isOn: true,
           toggleTimer: 0,
@@ -346,21 +369,26 @@ export class FlappyEngine {
         break;
         
       case 'meteor':
+        // Meteors get bigger and faster with difficulty
+        const meteorSize = Math.min(25 + (difficulty - 1) * 10, 40);
+        const meteorSpeed = 2 + Math.random() * 1.5 + (difficulty - 1);
         obstacle = {
           type: 'meteor',
           x: this.config.canvasWidth,
           y: -30,
-          width: 25, // Slightly smaller
-          height: 25,
+          width: meteorSize,
+          height: meteorSize,
           active: true,
           passed: false,
           velocityX: -1.5,
-          velocityY: 2 + Math.random() * 1.5, // Slower fall
+          velocityY: meteorSpeed,
         };
         break;
         
       case 'barrier':
-        const gapHeight = 150; // Larger gap for easier passage
+        // Gap gets smaller and barrier moves faster with difficulty
+        const gapHeight = Math.max(150 - (difficulty - 1) * 30, 100);
+        const barrierSpeed = 1 + (difficulty - 1) * 0.5;
         const gapY = 80 + Math.random() * (groundY - gapHeight - 120);
         obstacle = {
           type: 'barrier',
@@ -373,7 +401,7 @@ export class FlappyEngine {
           gapY,
           gapHeight,
           direction: Math.random() > 0.5 ? 1 : -1,
-          speed: 1, // Slower movement
+          speed: barrierSpeed,
           minY: 50,
           maxY: groundY - gapHeight - 50,
         };

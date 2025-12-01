@@ -249,9 +249,9 @@ export class FlappyEngine {
       return obs.x + obs.width > -50;
     });
     
-    // Spawn new obstacles
+    // Spawn new obstacles - slower spawn rate for easier gameplay
     this.lastObstacleSpawn++;
-    const spawnInterval = 80 + Math.random() * 40; // Randomize spawn timing
+    const spawnInterval = 120 + Math.random() * 60; // Longer intervals between obstacles
     if (this.lastObstacleSpawn > spawnInterval) {
       this.spawnObstacle();
       this.lastObstacleSpawn = 0;
@@ -305,9 +305,9 @@ export class FlappyEngine {
         obstacle = {
           type: 'spike',
           x: this.config.canvasWidth,
-          y: onGround ? groundY - 40 : 0,
-          width: 40,
-          height: 40,
+          y: onGround ? groundY - 30 : 0, // Smaller spikes
+          width: 30,
+          height: 30,
           active: true,
           passed: false,
           position: onGround ? 'ground' : 'ceiling',
@@ -350,18 +350,18 @@ export class FlappyEngine {
           type: 'meteor',
           x: this.config.canvasWidth,
           y: -30,
-          width: 30,
-          height: 30,
+          width: 25, // Slightly smaller
+          height: 25,
           active: true,
           passed: false,
-          velocityX: -2,
-          velocityY: 3 + Math.random() * 2,
+          velocityX: -1.5,
+          velocityY: 2 + Math.random() * 1.5, // Slower fall
         };
         break;
         
       case 'barrier':
-        const gapHeight = 120;
-        const gapY = 100 + Math.random() * (groundY - gapHeight - 150);
+        const gapHeight = 150; // Larger gap for easier passage
+        const gapY = 80 + Math.random() * (groundY - gapHeight - 120);
         obstacle = {
           type: 'barrier',
           x: this.config.canvasWidth,
@@ -373,7 +373,7 @@ export class FlappyEngine {
           gapY,
           gapHeight,
           direction: Math.random() > 0.5 ? 1 : -1,
-          speed: 1.5,
+          speed: 1, // Slower movement
           minY: 50,
           maxY: groundY - gapHeight - 50,
         };

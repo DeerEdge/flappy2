@@ -108,12 +108,12 @@ export interface GameConfig {
 export const DEFAULT_CONFIG: GameConfig = {
   canvasWidth: 400,
   canvasHeight: 600,
-  gravity: 0.5,
-  flapStrength: -9,
-  pipeSpeed: 3,
-  pipeGap: 150,
+  gravity: 0.4,
+  flapStrength: -7,
+  pipeSpeed: 2.5,
+  pipeGap: 160,
   pipeWidth: 60,
-  pipeSpawnInterval: 90,
+  pipeSpawnInterval: 100,
   groundHeight: 80,
 };
 

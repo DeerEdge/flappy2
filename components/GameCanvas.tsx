@@ -6,14 +6,12 @@ import { GameMode, DEFAULT_CONFIG } from '@/lib/game/types';
 
 interface GameCanvasProps {
   gameMode: GameMode;
-  onScoreChange: (score: number) => void;
   onGameOver: (score: number) => void;
   debugState?: 'start' | 'playing' | 'gameover';
 }
 
 export default function GameCanvas({ 
   gameMode, 
-  onScoreChange, 
   onGameOver,
   debugState 
 }: GameCanvasProps) {
@@ -28,11 +26,10 @@ export default function GameCanvas({
     if (state.gameOver) {
       // Reset and start fresh
       engineRef.current.reset();
-      onScoreChange(0);
     }
     
     engineRef.current.flap();
-  }, [onScoreChange]);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -42,7 +39,7 @@ export default function GameCanvas({
     if (!ctx) return;
 
     // Initialize engine with optional debug state
-    engineRef.current = new FlappyEngine(ctx, gameMode, onScoreChange, onGameOver, debugState);
+    engineRef.current = new FlappyEngine(ctx, gameMode, undefined, onGameOver, debugState);
     engineRef.current.render();
 
     // Keyboard handler
@@ -61,15 +58,14 @@ export default function GameCanvas({
         engineRef.current.destroy();
       }
     };
-  }, [gameMode, onScoreChange, onGameOver, handleInteraction, debugState]);
+  }, [gameMode, onGameOver, handleInteraction, debugState]);
 
   // Handle game mode changes
   useEffect(() => {
     if (engineRef.current) {
       engineRef.current.setGameMode(gameMode);
-      onScoreChange(0);
     }
-  }, [gameMode, onScoreChange]);
+  }, [gameMode]);
 
   return (
     <canvas

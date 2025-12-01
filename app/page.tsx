@@ -1,13 +1,18 @@
 'use client';
 
-import { useState, useCallback, useEffect, Suspense } from 'react';
+import { useState, useCallback, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { GameMode, MODE_NAMES } from '@/lib/game/types';
+import { GameMode } from '@/lib/game/types';
 import GameTabs from '@/components/GameTabs';
 import Leaderboard from '@/components/Leaderboard';
 import SessionScores from '@/components/SessionScores';
 import ScoreSubmit from '@/components/ScoreSubmit';
+import PlayerMetrics, { 
+  PlayerMetricsData, 
+  createEmptyMetrics, 
+  updateMetricsOnGameOver 
+} from '@/components/PlayerMetrics';
 
 interface SessionScore {
   id: string;
@@ -34,11 +39,12 @@ function GameContent() {
   const debugMode = searchParams.get('mode') as GameMode | null;
   
   const [gameMode, setGameMode] = useState<GameMode>(debugMode || 'original');
-  const [currentScore, setCurrentScore] = useState(0);
   const [showSubmit, setShowSubmit] = useState(false);
   const [scoreToSave, setScoreToSave] = useState<SessionScore | null>(null);
   const [leaderboardRefresh, setLeaderboardRefresh] = useState(0);
   const [sessionScores, setSessionScores] = useState<SessionScore[]>([]);
+  const [metrics, setMetrics] = useState<PlayerMetricsData>(createEmptyMetrics);
+  const gameStartTime = useRef<number>(Date.now());
 
   // Update mode from URL param
   useEffect(() => {
@@ -47,11 +53,17 @@ function GameContent() {
     }
   }, [debugMode]);
 
-  const handleScoreChange = useCallback((score: number) => {
-    setCurrentScore(score);
+  // Track game start time when game starts
+  const handleGameStart = useCallback(() => {
+    gameStartTime.current = Date.now();
   }, []);
 
   const handleGameOver = useCallback((score: number, mode: GameMode) => {
+    const playTime = (Date.now() - gameStartTime.current) / 1000;
+    
+    // Update metrics
+    setMetrics(prev => updateMetricsOnGameOver(prev, score, mode, playTime));
+    
     if (score > 0) {
       const newScore: SessionScore = {
         id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -62,6 +74,9 @@ function GameContent() {
       };
       setSessionScores(prev => [newScore, ...prev]);
     }
+    
+    // Reset start time for next game
+    gameStartTime.current = Date.now();
   }, []);
 
   const handleSaveScore = (sessionScore: SessionScore) => {
@@ -105,17 +120,10 @@ function GameContent() {
             {/* Game Mode Tabs - Above game, no overlap */}
             <GameTabs activeMode={gameMode} onModeChange={setGameMode} />
 
-            {/* Current Score Display - Separate from tabs */}
-            <div className="arcade-panel px-6 py-2">
-              <span className="font-pixel text-[8px] text-[var(--neon-cyan)]">SCORE </span>
-              <span className="font-pixel text-lg text-[var(--neon-green)] glow-green tabular-nums">{currentScore}</span>
-            </div>
-
             {/* Game Canvas */}
             <div className="crt-effect">
               <GameCanvas
                 gameMode={gameMode}
-                onScoreChange={handleScoreChange}
                 onGameOver={(score) => handleGameOver(score, gameMode)}
                 debugState={debugState || undefined}
               />
@@ -174,7 +182,7 @@ function GameContent() {
             )}
           </div>
 
-          {/* Right side - Leaderboard & Session Scores */}
+          {/* Right side - Leaderboard, Session Scores & Metrics */}
           <div className="flex flex-col gap-4 w-full max-w-sm">
             <Leaderboard gameMode={gameMode} refreshTrigger={leaderboardRefresh} />
             <SessionScores 
@@ -182,6 +190,7 @@ function GameContent() {
               onSaveScore={handleSaveScore}
               currentMode={gameMode}
             />
+            <PlayerMetrics metrics={metrics} currentMode={gameMode} />
           </div>
         </div>
 

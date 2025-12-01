@@ -97,10 +97,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Prepare update based on game mode
-    const updates: Record<string, number> = {
+    const updates: Record<string, number | string> = {
       total_games_played: (current.total_games_played || 0) + 1,
       total_play_time_seconds: (current.total_play_time_seconds || 0) + (play_time || 0),
-      updated_at: Date.now(),
+      updated_at: new Date().toISOString(),
     };
 
     // Update mode-specific stats

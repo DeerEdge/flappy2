@@ -15,10 +15,14 @@ const vt323 = VT323({
 });
 
 export const metadata: Metadata = {
-  title: "FLAPPY BIRD",
-  description: "Classic Flappy Bird arcade game with power-ups mode",
+  title: "FLAPPY2 | Arcade",
+  description: "Classic Flappy Bird arcade game with power-ups and survival modes",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.svg", type: "image/svg+xml" },
+      { url: "/favicon.ico", sizes: "any" },
+    ],
+    apple: "/favicon.svg",
   },
 };
 

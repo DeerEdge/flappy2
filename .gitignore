@@ -39,12 +39,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# cursor
-.cursorrules
-.cursorignore
-
-# secrets & backup files
-*.backup
-*.bak
-.infisical*

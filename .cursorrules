@@ -1,0 +1,71 @@
+- NEVER create markdown files (.md)
+- NEVER create backup files
+- NEVER create documentation files
+- Focus on code only
+- No README, no guides, no instructions files
+
+SENIOR ENGINEERING STANDARDS:
+- Think through decisions like a senior engineering team
+- Optimize for performance: eliminate unnecessary API calls, re-renders, and database queries
+- Design for scale: assume 100K+ concurrent users
+- Keep it modular and maintainable
+- No bloated files or redundant components
+- Every line of code must have a clear purpose
+- DRY principle: Don't Repeat Yourself
+- YAGNI principle: You Aren't Gonna Need It (don't over-engineer)
+- Measure twice, cut once: plan before implementing
+- Clean naming: no references to specific products (e.g., "ChatInterface" not "ClaudeLikeChatInterface")
+
+CODE STRUCTURE PRINCIPLES:
+- Write modular, reusable components
+- Separate concerns: UI, logic, data, utilities
+- Use clear, descriptive naming conventions
+- Keep functions small and focused (single responsibility)
+- Add TypeScript types for everything
+- Extract constants and configurations
+- Comment complex logic, not obvious code
+- Structure files logically: components/, lib/, utils/, types/
+- Make code easy to debug with clear error messages
+- Use composition over inheritance
+- Keep components under 300 lines (split if larger)
+
+PERFORMANCE PRINCIPLES:
+- Minimize re-renders with proper memoization
+- Batch database operations where possible
+- Use indexes for all frequently queried fields
+- Lazy load heavy components
+- Debounce user input
+- Cache expensive computations
+- Avoid unnecessary useEffect calls
+- Clean up event listeners and intervals
+
+GIT COMMIT STANDARDS:
+- Keep commit messages short and descriptive
+- Maximum 3 bullet points in description
+- No fluff or unnecessary details
+- Format: Short title (50 chars max) + 3 bullets max
+- Focus on what changed, not why (code explains why)
+
+RESEARCH-FIRST APPROACH FOR COMPLEX PROBLEMS:
+- Before implementing any complex feature or fixing a difficult bug, STOP and research
+- Use web search to find current best practices (2024+) for the specific technology stack
+- Look for: official documentation, GitHub issues, Stack Overflow solutions, blog posts from reputable sources
+- Identify common pitfalls and anti-patterns BEFORE writing code
+- Compare multiple approaches and choose the one with best trade-offs for our use case
+- Document findings in comments if the solution is non-obvious
+- Never assume you know the best approach - verify with research
+- If going in circles on an issue, step back and research the root cause
+- Prioritize battle-tested solutions over clever hacks
+- When integrating new tools/libraries, read their docs thoroughly first
+
+INDUSTRY STANDARDS & TESTING:
+- For complex features, research how industry leaders (Google, OpenAI, Anthropic, etc.) solve similar problems
+- Look up established patterns and standards before implementing custom solutions
+- Consider accessibility, internationalization, and edge cases from the start
+- Test extensively: cover all viewpoints, edge cases, and failure modes
+- When building UI features, test across different screen sizes and browsers
+- For data processing, test with malformed, empty, and extreme inputs
+- Validate assumptions with real-world scenarios before shipping
+- Use feature flags for gradual rollouts of complex features
+- Monitor and measure: add logging for critical paths
+

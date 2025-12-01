@@ -30,13 +30,36 @@ export async function GET() {
 
     if (error) {
       console.error('Supabase error:', error);
-      return NextResponse.json({ error: 'Failed to fetch metrics' }, { status: 500 });
+      // Return default metrics if no data found
+      return NextResponse.json({ 
+        metrics: {
+          totalGamesPlayed: 0,
+          totalPlayTime: 0,
+          gamesByMode: { original: 0, modified: 0, obstacles: 0 },
+          highScoreByMode: { original: 0, modified: 0, obstacles: 0 },
+          avgScoreByMode: { original: 0, modified: 0, obstacles: 0 },
+          longestSurvival: 0,
+        }
+      });
+    }
+
+    if (!data) {
+      return NextResponse.json({ 
+        metrics: {
+          totalGamesPlayed: 0,
+          totalPlayTime: 0,
+          gamesByMode: { original: 0, modified: 0, obstacles: 0 },
+          highScoreByMode: { original: 0, modified: 0, obstacles: 0 },
+          avgScoreByMode: { original: 0, modified: 0, obstacles: 0 },
+          longestSurvival: 0,
+        }
+      });
     }
 
     // Calculate averages
     const metrics = {
       totalGamesPlayed: data.total_games_played || 0,
-      totalPlayTime: Math.round(data.total_play_time_seconds || 0),
+      totalPlayTime: Math.round(Number(data.total_play_time_seconds) || 0),
       gamesByMode: {
         original: data.games_original || 0,
         modified: data.games_modified || 0,
@@ -49,13 +72,13 @@ export async function GET() {
       },
       avgScoreByMode: {
         original: data.games_original > 0 
-          ? Math.round((data.total_score_original / data.games_original) * 10) / 10 
+          ? Math.round((Number(data.total_score_original) / data.games_original) * 10) / 10 
           : 0,
         modified: data.games_modified > 0 
-          ? Math.round((data.total_score_modified / data.games_modified) * 10) / 10 
+          ? Math.round((Number(data.total_score_modified) / data.games_modified) * 10) / 10 
           : 0,
         obstacles: data.games_obstacles > 0 
-          ? Math.round((data.total_score_obstacles / data.games_obstacles) * 10) / 10 
+          ? Math.round((Number(data.total_score_obstacles) / data.games_obstacles) * 10) / 10 
           : 0,
       },
       longestSurvival: data.longest_survival || 0,

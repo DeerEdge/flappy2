@@ -3,13 +3,17 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
 let supabase: SupabaseClient | null = null;
 
-function getSupabaseClient(): SupabaseClient {
+function getSupabaseClient(): SupabaseClient | null {
   if (!supabase) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     
     if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error('Supabase credentials not configured');
+      console.error('Supabase credentials not configured:', { 
+        hasUrl: !!supabaseUrl, 
+        hasKey: !!supabaseAnonKey 
+      });
+      return null;
     }
     
     supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -24,6 +28,10 @@ export async function GET(request: NextRequest) {
 
   try {
     const client = getSupabaseClient();
+    if (!client) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    }
+    
     const { data, error } = await client
       .from('scores')
       .select('*')
@@ -60,6 +68,10 @@ export async function POST(request: NextRequest) {
     const name = (player_name || 'Anonymous').slice(0, 20).trim() || 'Anonymous';
 
     const client = getSupabaseClient();
+    if (!client) {
+      return NextResponse.json({ error: 'Database not configured' }, { status: 503 });
+    }
+    
     const { data, error } = await client
       .from('scores')
       .insert({

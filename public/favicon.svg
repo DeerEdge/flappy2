@@ -1,31 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <!-- Background -->
-  <rect width="32" height="32" fill="#1a1a2e"/>
+  <!-- Dark arcade background -->
+  <rect width="32" height="32" fill="#0a0a1a" rx="4"/>
   
-  <!-- Bird body (pixel art style) -->
-  <rect x="8" y="12" width="16" height="10" fill="#ffff00"/>
-  <rect x="6" y="14" width="2" height="6" fill="#ffff00"/>
-  <rect x="24" y="14" width="2" height="4" fill="#ffff00"/>
+  <!-- Bird body - bright yellow -->
+  <ellipse cx="14" cy="16" rx="10" ry="8" fill="#ffff00"/>
+  <ellipse cx="14" cy="16" rx="10" ry="8" fill="none" stroke="#ff8c00" stroke-width="1"/>
   
-  <!-- Wing -->
-  <rect x="10" y="16" width="6" height="4" fill="#ff8c00"/>
-  <rect x="8" y="18" width="2" height="2" fill="#ff8c00"/>
+  <!-- Wing - orange -->
+  <ellipse cx="11" cy="17" rx="5" ry="3" fill="#ff8c00"/>
   
-  <!-- Eye -->
-  <rect x="18" y="14" width="4" height="4" fill="#ffffff"/>
-  <rect x="20" y="14" width="2" height="2" fill="#000000"/>
+  <!-- Eye - white with black pupil -->
+  <circle cx="18" cy="13" r="4" fill="#ffffff"/>
+  <circle cx="19" cy="13" r="2" fill="#000000"/>
   
-  <!-- Beak -->
-  <rect x="24" y="16" width="4" height="2" fill="#ff4444"/>
-  <rect x="26" y="18" width="2" height="2" fill="#ff4444"/>
+  <!-- Beak - red/orange -->
+  <polygon points="24,16 30,18 24,20" fill="#ff4444"/>
   
-  <!-- Tail feathers -->
-  <rect x="4" y="14" width="2" height="2" fill="#ff8c00"/>
-  <rect x="4" y="18" width="2" height="2" fill="#ff8c00"/>
-  
-  <!-- Neon glow effect (subtle) -->
-  <rect x="8" y="10" width="16" height="2" fill="#39ff14" opacity="0.3"/>
-  <rect x="8" y="22" width="16" height="2" fill="#39ff14" opacity="0.3"/>
+  <!-- Neon glow outline -->
+  <ellipse cx="14" cy="16" rx="11" ry="9" fill="none" stroke="#39ff14" stroke-width="1" opacity="0.6"/>
 </svg>
-
-

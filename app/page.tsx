@@ -142,15 +142,15 @@ function GameContent() {
                 <div className="font-pixel text-[8px] text-[var(--neon-magenta)] mb-2 text-center">POWER-UPS</div>
                 <div className="flex justify-center gap-4 font-retro text-xs">
                   <div className="flex items-center gap-1">
-                    <span className="w-4 h-4 rounded bg-[var(--neon-cyan)] flex items-center justify-center text-black text-[10px] font-bold">S</span>
+                    <span className="w-5 h-5 rounded bg-[var(--neon-cyan)]/20 border border-[var(--neon-cyan)] flex items-center justify-center text-[12px]">🛡️</span>
                     <span className="text-[var(--neon-cyan)]">SHIELD</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="w-4 h-4 rounded bg-[var(--neon-magenta)] flex items-center justify-center text-black text-[10px] font-bold">T</span>
+                    <span className="w-5 h-5 rounded bg-[var(--neon-magenta)]/20 border border-[var(--neon-magenta)] flex items-center justify-center text-[12px]">⏱️</span>
                     <span className="text-[var(--neon-magenta)]">SLOW</span>
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="w-4 h-4 rounded bg-[var(--neon-yellow)] flex items-center justify-center text-black text-[10px] font-bold">2</span>
+                    <span className="w-5 h-5 rounded bg-[var(--neon-yellow)]/20 border border-[var(--neon-yellow)] flex items-center justify-center text-[12px]">💰</span>
                     <span className="text-[var(--neon-yellow)]">×2</span>
                   </div>
                 </div>

@@ -109,7 +109,7 @@ function GameContent() {
           
           {/* Navigation */}
           <nav className="flex gap-2">
-            <button className="arcade-panel px-4 py-2 font-pixel text-xs bg-[var(--neon-green)] text-black">
+            <button className="arcade-panel px-4 py-2 font-pixel text-xs bg-[var(--neon-green)]" style={{ color: '#ffffff' }}>
               PLAY!
             </button>
             <Link href="/metrics">

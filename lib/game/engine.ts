@@ -337,8 +337,12 @@ export class FlappyEngine {
       case 'laser':
         const laserY = 100 + Math.random() * (groundY - 200);
         // Lasers get wider and toggle faster with difficulty
+        // More unpredictable timing - randomize on/off times
         const laserWidth = Math.min(80 + (difficulty - 1) * 40, 140);
-        const laserOnTime = Math.max(90 - (difficulty - 1) * 20, 50);
+        const baseOnTime = Math.max(90 - (difficulty - 1) * 20, 40);
+        const laserOnTime = baseOnTime + Math.floor(Math.random() * 40); // Vary timing
+        const laserOffTime = 40 + Math.floor(Math.random() * 40); // Vary off time too
+        const startOn = Math.random() > 0.3; // Sometimes start off
         obstacle = {
           type: 'laser',
           x: this.config.canvasWidth,
@@ -348,9 +352,9 @@ export class FlappyEngine {
           active: true,
           passed: false,
           onTime: laserOnTime,
-          offTime: 60,
-          isOn: true,
-          toggleTimer: 0,
+          offTime: laserOffTime,
+          isOn: startOn,
+          toggleTimer: startOn ? 0 : Math.floor(Math.random() * laserOnTime), // Random phase
         };
         break;
         
@@ -370,18 +374,32 @@ export class FlappyEngine {
         
       case 'meteor':
         // Meteors get bigger and faster with difficulty
+        // More unpredictable trajectories - can come from different angles
         const meteorSize = Math.min(25 + (difficulty - 1) * 10, 40);
-        const meteorSpeed = 2 + Math.random() * 1.5 + (difficulty - 1);
+        const meteorSpeed = 2 + Math.random() * 2 + (difficulty - 1);
+        // Randomize spawn position and direction
+        const spawnFromTop = Math.random() > 0.3;
+        const meteorX = spawnFromTop 
+          ? this.config.canvasWidth * (0.3 + Math.random() * 0.7)  // Spawn across top
+          : this.config.canvasWidth;  // Spawn from right
+        const meteorY = spawnFromTop ? -30 : Math.random() * (groundY * 0.6);
+        // Randomize velocity direction
+        const velX = spawnFromTop 
+          ? (Math.random() - 0.5) * 3  // Can go left or right from top
+          : -(1 + Math.random() * 2);  // Always goes left from side
+        const velY = spawnFromTop 
+          ? meteorSpeed 
+          : (Math.random() - 0.3) * 2;  // Slight up/down from side
         obstacle = {
           type: 'meteor',
-          x: this.config.canvasWidth,
-          y: -30,
+          x: meteorX,
+          y: meteorY,
           width: meteorSize,
           height: meteorSize,
           active: true,
           passed: false,
-          velocityX: -1.5,
-          velocityY: meteorSpeed,
+          velocityX: velX,
+          velocityY: velY,
         };
         break;
         
@@ -443,9 +461,13 @@ export class FlappyEngine {
           
         case 'portal':
           if (!obs.teleported && this.checkAABBCollision(birdBox, obs)) {
-            // Teleport bird to random Y position
+            // Teleport bird to random Y position and shift X forward or backward
             const groundY = this.config.canvasHeight - this.config.groundHeight;
             this.state.bird.y = 50 + Math.random() * (groundY - 150);
+            // Randomly teleport forward (right) or backward (left) on X
+            const xShift = (Math.random() - 0.4) * 100; // Bias slightly forward
+            const newX = Math.max(40, Math.min(this.config.canvasWidth - 100, this.state.bird.x + xShift));
+            this.state.bird.x = newX;
             this.state.bird.velocity = 0;
             obs.teleported = true;
             // Bonus points for portal
@@ -1059,11 +1081,12 @@ export class FlappyEngine {
     ctx.textBaseline = 'middle';
     
     const icons: Record<PowerUpType, string> = {
-      shield: 'S',
-      slowmo: 'T',
-      double: '2',
+      shield: '🛡',
+      slowmo: '⏱',
+      double: '💰',
     };
     
+    ctx.font = 'bold 14px sans-serif';
     ctx.fillText(icons[type], centerX, centerY);
     ctx.shadowBlur = 0;
   }
@@ -1215,10 +1238,11 @@ export class FlappyEngine {
       ctx.textBaseline = 'middle';
       
       const icons: Record<PowerUpType, string> = {
-        shield: 'S',
-        slowmo: 'T',
-        double: '2',
+        shield: '🛡',
+        slowmo: '⏱',
+        double: '💰',
       };
+      ctx.font = '12px sans-serif';
       ctx.fillText(icons[powerUp.type], offsetX + 17.5, 22);
       
       // Timer
@@ -1285,7 +1309,7 @@ export class FlappyEngine {
         break;
       case 'modified':
         ctx.fillText('Collect power-ups!', canvasWidth / 2, canvasHeight / 2 - 20);
-        ctx.fillText('Shield • Slow-Mo • 2x Points', canvasWidth / 2, canvasHeight / 2);
+        ctx.fillText('🛡 Shield • ⏱ Slow-Mo • 💰 2x Points', canvasWidth / 2, canvasHeight / 2);
         break;
       case 'obstacles':
         ctx.fillText('Survive as long as you can!', canvasWidth / 2, canvasHeight / 2 - 30);

@@ -23,6 +23,7 @@ interface ModeStats {
 
 export default function MetricsPage() {
   const [scores, setScores] = useState<Score[]>([]);
+  const [totalPlayTime, setTotalPlayTime] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'scatter' | 'trends' | 'leaderboard'>('overview');
@@ -33,7 +34,32 @@ export default function MetricsPage() {
 
   useEffect(() => {
     fetchAllScores();
+    fetchMetrics();
   }, []);
+
+  const fetchMetrics = async () => {
+    try {
+      const res = await fetch('/api/metrics');
+      const data = await res.json();
+      if (data.metrics) {
+        setTotalPlayTime(data.metrics.totalPlayTime || 0);
+      }
+    } catch {
+      console.error('Failed to fetch metrics');
+    }
+  };
+
+  const formatPlayTime = (seconds: number): string => {
+    if (seconds < 60) return `${seconds}s`;
+    if (seconds < 3600) {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+    }
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  };
 
   const fetchAllScores = async () => {
     try {
@@ -363,9 +389,10 @@ export default function MetricsPage() {
       ctx.shadowBlur = 0;
       
       // Draw points
-      dateAvgs.forEach((point, i) => {
-        const x = padding + (i / (dateAvgs.length - 1)) * (width - padding * 2);
-        const y = height - padding - (point.avg / maxScore) * (height - padding * 2);
+      modeScores.forEach((score) => {
+        const scoreTime = new Date(score.created_at).getTime();
+        const x = padding + ((scoreTime - minTime) / timeRange) * (width - padding * 2);
+        const y = height - padding - (score.score / maxScore) * (height - padding * 2);
         
         ctx.fillStyle = color;
         ctx.beginPath();
@@ -439,7 +466,7 @@ export default function MetricsPage() {
                 PLAY!
               </button>
             </Link>
-            <button className="arcade-panel px-4 py-2 font-pixel text-xs bg-[var(--neon-cyan)] text-black">
+            <button className="arcade-panel px-4 py-2 font-pixel text-xs bg-[var(--neon-cyan)]" style={{ color: '#ffffff' }}>
               METRICS
             </button>
           </nav>
@@ -483,12 +510,18 @@ export default function MetricsPage() {
               {activeTab === 'overview' && (
                 <div className="space-y-6">
                   {/* Summary Stats */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                     <div className="arcade-panel p-4 text-center">
                       <div className="font-pixel text-2xl md:text-3xl text-[var(--neon-green)] glow-green">
                         {totalGames}
                       </div>
                       <div className="font-retro text-xs text-gray-400 mt-1">TOTAL GAMES</div>
+                    </div>
+                    <div className="arcade-panel p-4 text-center">
+                      <div className="font-pixel text-2xl md:text-3xl text-[var(--neon-magenta)] glow-magenta">
+                        {formatPlayTime(totalPlayTime)}
+                      </div>
+                      <div className="font-retro text-xs text-gray-400 mt-1">TIME PLAYED</div>
                     </div>
                     <div className="arcade-panel p-4 text-center">
                       <div className="font-pixel text-2xl md:text-3xl text-[var(--neon-cyan)] glow-cyan">

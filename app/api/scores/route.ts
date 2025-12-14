@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     
     const { data, error } = await client
       .from('scores')
-      .select('*')
+      .select('id, player_name, score, game_mode, created_at')
       .eq('game_mode', mode)
       .order('score', { ascending: false })
       .limit(limit);

@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FLAPPY2 Data Report</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #0a0a0a 100%);
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 40px;
+    }
+    h1 {
+      text-align: center;
+      font-size: 2.5rem;
+      color: #39ff14;
+      text-shadow: 0 0 20px rgba(57, 255, 20, 0.5);
+      margin-bottom: 10px;
+    }
+    .subtitle {
+      text-align: center;
+      color: #888;
+      margin-bottom: 40px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+      gap: 30px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    .card {
+      background: rgba(20, 20, 30, 0.9);
+      border: 1px solid rgba(57, 255, 20, 0.3);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    }
+    .card h2 {
+      color: #39ff14;
+      font-size: 1.2rem;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .chart-container {
+      position: relative;
+      height: 300px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+    th, td {
+      padding: 12px 8px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    th {
+      color: #39ff14;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.5px;
+    }
+    tr:hover { background: rgba(57, 255, 20, 0.05); }
+    .mode-badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .mode-original { background: #39ff14; color: #000; }
+    .mode-modified { background: #ff00ff; color: #fff; }
+    .mode-obstacles { background: #ff6600; color: #fff; }
+    .gen-yes { color: #888; font-style: italic; }
+    .gen-no { color: #39ff14; font-weight: 600; }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+    }
+    .stat-box {
+      background: rgba(57, 255, 20, 0.1);
+      border-radius: 8px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #39ff14;
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      color: #888;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+    .full-width { grid-column: 1 / -1; }
+    .scrollable { max-height: 400px; overflow-y: auto; }
+  </style>
+</head>
+<body>
+  <h1>🐦 FLAPPY2 DATA REPORT</h1>
+  <p class="subtitle">Generated: December 14, 2025 | Total Entries: 167</p>
+
+  <div class="grid">
+    <!-- Summary Stats -->
+    <div class="card">
+      <h2>📊 Summary Statistics</h2>
+      <div class="stat-grid">
+        <div class="stat-box">
+          <div class="stat-value">167</div>
+          <div class="stat-label">Total Scores</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">150</div>
+          <div class="stat-label">Generated</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-value">17</div>
+          <div class="stat-label">Real Players</div>
+        </div>
+      </div>
+      <table style="margin-top: 20px;">
+        <thead>
+          <tr>
+            <th>Mode</th>
+            <th>Total</th>
+            <th>Avg</th>
+            <th>Min</th>
+            <th>Max</th>
+            <th>Median</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="mode-badge mode-original">CLASSIC</span></td>
+            <td>64</td>
+            <td>19.6</td>
+            <td>1</td>
+            <td>110</td>
+            <td>12</td>
+          </tr>
+          <tr>
+            <td><span class="mode-badge mode-modified">POWER-UPS</span></td>
+            <td>51</td>
+            <td>30.9</td>
+            <td>3</td>
+            <td>96</td>
+            <td>27</td>
+          </tr>
+          <tr>
+            <td><span class="mode-badge mode-obstacles">SURVIVAL</span></td>
+            <td>52</td>
+            <td>27.2</td>
+            <td>4</td>
+            <td>93</td>
+            <td>22.5</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Score Distribution Chart -->
+    <div class="card">
+      <h2>📈 Score Distribution by Mode</h2>
+      <div class="chart-container">
+        <canvas id="distributionChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Bar Chart Comparison -->
+    <div class="card">
+      <h2>📊 Average Scores Comparison</h2>
+      <div class="chart-container">
+        <canvas id="avgChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Pie Chart -->
+    <div class="card">
+      <h2>🥧 Games by Mode</h2>
+      <div class="chart-container">
+        <canvas id="pieChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Top Scores Table -->
+    <div class="card full-width">
+      <h2>🏆 Top 10 Scores (All Modes)</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Player</th>
+            <th>Score</th>
+            <th>Mode</th>
+            <th>Date</th>
+            <th>Gen</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>SHIVA(+VEDU)</td><td>110</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-01</td><td class="gen-no">No</td></tr>
+          <tr><td>2</td><td>PLAYER_1</td><td>96</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-27</td><td class="gen-yes">Yes</td></tr>
+          <tr><td>3</td><td>SHIVA</td><td>93</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-01</td><td class="gen-no">No</td></tr>
+          <tr><td>4</td><td>THUNDER_B</td><td>88</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-26</td><td class="gen-yes">Yes</td></tr>
+          <tr><td>5</td><td>LIGHTNING</td><td>86</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-26</td><td class="gen-yes">Yes</td></tr>
+          <tr><td>6</td><td>MAVERICK</td><td>78</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-28</td><td class="gen-yes">Yes</td></tr>
+          <tr><td>7</td><td>RAVEN</td><td>74</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-15</td><td class="gen-yes">Yes</td></tr>
+          <tr><td>8</td><td>EAGLE_EYE</td><td>67</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-29</td><td class="gen-yes">Yes</td></tr>
+          <tr><td>9</td><td>ULTRA_FLY</td><td>65</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-18</td><td class="gen-yes">Yes</td></tr>
+          <tr><td>10</td><td>D-REX</td><td>61</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-01</td><td class="gen-no">No</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- All Scores Table -->
+    <div class="card full-width">
+      <h2>📋 All Scores Data (167 entries)</h2>
+      <div class="scrollable">
+        <table id="allScoresTable">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th>Score</th>
+              <th>Mode</th>
+              <th>Date</th>
+              <th>Generated</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- CLASSIC MODE -->
+            <tr><td>SHIVA(+VEDU)</td><td>110</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-01</td><td class="gen-no">No</td></tr>
+            <tr><td>D-REX</td><td>61</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-01</td><td class="gen-no">No</td></tr>
+            <tr><td>BANG</td><td>56</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-01</td><td class="gen-no">No</td></tr>
+            <tr><td>NAV</td><td>53</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-01</td><td class="gen-no">No</td></tr>
+            <tr><td>MAVERICK</td><td>39</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-10</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>JET_BIRD</td><td>38</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-07</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>SPEED_DEMON</td><td>38</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-04</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>FINCH</td><td>37</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-04</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>THUNDER_B</td><td>35</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-01</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>DHEERAJ</td><td>35</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-01</td><td class="gen-no">No</td></tr>
+            <tr><td>LEGEND</td><td>34</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-29</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>TRY_HARD</td><td>34</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-19</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>ULTRA_FLY</td><td>34</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-01</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>RETRO_KID</td><td>33</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-04</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>WING_FURY</td><td>33</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-05</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CYBER_BIRD</td><td>32</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-22</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CASUAL</td><td>32</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-26</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>GOOSE</td><td>30</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-28</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>RETRO_KID</td><td>29</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-16</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>LEGEND</td><td>27</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-08</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>PIXEL_PUNK</td><td>26</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-23</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>VIPER</td><td>26</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-17</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CLOUD_9</td><td>22</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-10</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CHAMPION</td><td>20</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-12</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>3000</td><td>19</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-01</td><td class="gen-no">No</td></tr>
+            <tr><td>LEEBRON</td><td>18</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-02</td><td class="gen-no">No</td></tr>
+            <tr><td>PIPE_MASTER</td><td>17</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-16</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>SPEED_DEMON</td><td>17</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-30</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>ABHAY</td><td>17</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-01</td><td class="gen-no">No</td></tr>
+            <tr><td>EAGLE_EYE</td><td>16</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-29</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CHAMPION</td><td>15</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-07</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CYBER_BIRD</td><td>12</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-17</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>AIR_BOSS</td><td>12</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-23</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>BOB</td><td>12</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-01</td><td class="gen-no">No</td></tr>
+            <tr><td>NEON_NINJA</td><td>11</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-10</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>ARCADE_FAN</td><td>11</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-09</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>LIGHTNING</td><td>11</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-04</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CLOUD_9</td><td>10</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-02</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>FALCON</td><td>10</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-10</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>PRODBEAM</td><td>9</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-12</td><td class="gen-no">No</td></tr>
+            <tr><td>TOP_GUN</td><td>9</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-11</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>TURBO_FLAP</td><td>8</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-07</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>EAGLE_EYE</td><td>8</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-24</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CLOUD_9</td><td>7</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-30</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>LIGHTNING</td><td>7</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-08</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>WINNER</td><td>7</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-11</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CLOUD_9</td><td>6</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-15</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>WINNER</td><td>6</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-27</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>SWIFT_WING</td><td>6</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-01</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>NAV</td><td>6</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-01</td><td class="gen-no">No</td></tr>
+            <tr><td>DHEERAJ</td><td>6</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-01</td><td class="gen-no">No</td></tr>
+            <tr><td>EAGLE_EYE</td><td>5</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-09</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>NOOB_KING</td><td>5</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-28</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>AAA</td><td>5</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-01</td><td class="gen-no">No</td></tr>
+            <tr><td>ACE_PILOT</td><td>5</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-21</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CLOUD_9</td><td>5</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-05</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>GAMER_X</td><td>4</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-09</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>BIRD_KING</td><td>3</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-21</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>LIGHTNING</td><td>3</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-20</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CARDINAL</td><td>3</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-10</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>NEON_NINJA</td><td>3</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-27</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>SERI</td><td>2</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-02</td><td class="gen-no">No</td></tr>
+            <tr><td>EAGLE_EYE</td><td>1</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-12-02</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>PRO_GAMER</td><td>1</td><td><span class="mode-badge mode-original">CLASSIC</span></td><td>2025-11-17</td><td class="gen-yes">Yes</td></tr>
+            <!-- POWER-UPS MODE -->
+            <tr><td>PLAYER_1</td><td>96</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-27</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>LIGHTNING</td><td>86</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-26</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>MAVERICK</td><td>78</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-28</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>EAGLE_EYE</td><td>67</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-29</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>ULTRA_FLY</td><td>65</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-18</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>PIXEL_BIRD</td><td>59</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-23</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>PLAYER_1</td><td>59</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-12-02</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>PIPE_MASTER</td><td>52</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-23</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CARDINAL</td><td>50</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-22</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>ARCADE_FAN</td><td>45</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-12-13</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>EAGLE_EYE</td><td>45</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-12-12</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>LIGHTNING</td><td>45</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-12-05</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>TOP_GUN</td><td>44</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-18</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>VIPER</td><td>43</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-12-08</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>THUNDER_B</td><td>40</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-12-05</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>SKY_RIDER</td><td>39</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-20</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>GAMER_X</td><td>39</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-12-12</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>PHOENIX</td><td>39</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-30</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>BLUEJAY</td><td>38</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-17</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>MAVERICK</td><td>36</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-26</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>PIPE_MASTER</td><td>32</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-26</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CARDINAL</td><td>29</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-12-02</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>EAGLE_EYE</td><td>29</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-12-02</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>NEON_NINJA</td><td>29</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-22</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>AIR_BOSS</td><td>28</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-14</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>PLAYER_1</td><td>27</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-12-01</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>RAVEN</td><td>25</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-12-09</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>LIGHTNING</td><td>25</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-15</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>LEGEND</td><td>24</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-21</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>MEGA_BIRD</td><td>24</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-12-07</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>SHIVA</td><td>24</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-12-01</td><td class="gen-no">No</td></tr>
+            <tr><td>WINNER</td><td>24</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-14</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>PRO_GAMER</td><td>20</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-12-07</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>TURBO_FLAP</td><td>19</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-25</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>PIPE_MASTER</td><td>17</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-14</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>THUNDER_B</td><td>15</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-15</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>STORM_WING</td><td>15</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-12-13</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CASUAL</td><td>14</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-12-11</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>LIGHTNING</td><td>13</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-14</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>ARCADE_FAN</td><td>13</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-12-07</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>GAMER_X</td><td>10</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-12-05</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>MEGA_BIRD</td><td>10</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-26</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>LIGHTNING</td><td>9</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-15</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>NEON_FLYER</td><td>8</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-16</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>AIR_BOSS</td><td>6</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-25</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>STORM_WING</td><td>6</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-28</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>SPEED_DEMON</td><td>5</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-26</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>AIR_BOSS</td><td>4</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-29</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>WING_FURY</td><td>3</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-23</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>PHOENIX</td><td>3</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-21</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>PRO_GAMER</td><td>3</td><td><span class="mode-badge mode-modified">POWER-UPS</span></td><td>2025-11-17</td><td class="gen-yes">Yes</td></tr>
+            <!-- SURVIVAL MODE -->
+            <tr><td>SHIVA</td><td>93</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-01</td><td class="gen-no">No</td></tr>
+            <tr><td>THUNDER_B</td><td>88</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-26</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>RAVEN</td><td>74</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-15</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>THUNDER_B</td><td>47</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-07</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>PRO_GAMER</td><td>44</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-30</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>FINCH</td><td>44</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-08</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CHAMPION</td><td>43</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-04</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>ULTRA_FLY</td><td>42</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-25</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CYBER_BIRD</td><td>41</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-25</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>FLAPPY_PRO</td><td>41</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-21</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>SWIFT_WING</td><td>41</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-09</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>SPEED_DEMON</td><td>40</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-12</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>PHOENIX</td><td>40</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-06</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>DHEERAJ</td><td>38</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-01</td><td class="gen-no">No</td></tr>
+            <tr><td>LEGEND</td><td>34</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-30</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>AIR_BOSS</td><td>33</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-23</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>ULTRA_FLY</td><td>32</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-12</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>SKY_RIDER</td><td>32</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-27</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CLOUD_9</td><td>31</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-20</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>GAMER_X</td><td>30</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-01</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>ROBIN</td><td>30</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-15</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>MEGA_BIRD</td><td>28</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-23</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>NEON_FLYER</td><td>28</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-17</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>TOP_GUN</td><td>26</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-26</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>VIPER</td><td>24</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-11</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CLOUD_9</td><td>23</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-19</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CARDINAL</td><td>22</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-20</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>PIXEL_BIRD</td><td>20</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-04</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CLOUD_9</td><td>20</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-03</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>ARCADE_FAN</td><td>20</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-28</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>SPARROW</td><td>19</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-30</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CASUAL</td><td>19</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-03</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CLOUD_9</td><td>18</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-12</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>ULTRA_FLY</td><td>17</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-28</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>STORM_WING</td><td>17</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-16</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>JET_BIRD</td><td>16</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-27</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>RETRO_KID</td><td>15</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-17</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>NOOB_KING</td><td>14</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-13</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>TOP_GUN</td><td>14</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-08</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CYBER_BIRD</td><td>13</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-23</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>ICEMAN</td><td>12</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-27</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>CYBER_BIRD</td><td>12</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-13</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>FINCH</td><td>12</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-20</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>ARCADE_FAN</td><td>11</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-10</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>MAVERICK</td><td>10</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-20</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>MEGA_BIRD</td><td>10</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-20</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>ULTRA_FLY</td><td>8</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-12</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>TOP_GUN</td><td>8</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-16</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>TOP_GUN</td><td>7</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-01</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>SPARROW</td><td>5</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-03</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>GOOSE</td><td>5</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-11-15</td><td class="gen-yes">Yes</td></tr>
+            <tr><td>SKY_RIDER</td><td>4</td><td><span class="mode-badge mode-obstacles">SURVIVAL</span></td><td>2025-12-11</td><td class="gen-yes">Yes</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Score Distribution Chart
+    const distributionCtx = document.getElementById('distributionChart').getContext('2d');
+    new Chart(distributionCtx, {
+      type: 'scatter',
+      data: {
+        datasets: [
+          {
+            label: 'Classic',
+            data: [
+              {x: 1, y: 110}, {x: 2, y: 61}, {x: 3, y: 56}, {x: 4, y: 53}, {x: 5, y: 39},
+              {x: 6, y: 38}, {x: 7, y: 38}, {x: 8, y: 37}, {x: 9, y: 35}, {x: 10, y: 35},
+              {x: 11, y: 34}, {x: 12, y: 34}, {x: 13, y: 34}, {x: 14, y: 33}, {x: 15, y: 33},
+              {x: 16, y: 32}, {x: 17, y: 32}, {x: 18, y: 30}, {x: 19, y: 29}, {x: 20, y: 27},
+              {x: 21, y: 26}, {x: 22, y: 26}, {x: 23, y: 22}, {x: 24, y: 20}, {x: 25, y: 19},
+              {x: 26, y: 18}, {x: 27, y: 17}, {x: 28, y: 17}, {x: 29, y: 17}, {x: 30, y: 16},
+              {x: 31, y: 15}, {x: 32, y: 12}, {x: 33, y: 12}, {x: 34, y: 12}, {x: 35, y: 11},
+              {x: 36, y: 11}, {x: 37, y: 11}, {x: 38, y: 10}, {x: 39, y: 10}, {x: 40, y: 9},
+              {x: 41, y: 9}, {x: 42, y: 8}, {x: 43, y: 8}, {x: 44, y: 7}, {x: 45, y: 7},
+              {x: 46, y: 7}, {x: 47, y: 6}, {x: 48, y: 6}, {x: 49, y: 6}, {x: 50, y: 6},
+              {x: 51, y: 6}, {x: 52, y: 5}, {x: 53, y: 5}, {x: 54, y: 5}, {x: 55, y: 5},
+              {x: 56, y: 5}, {x: 57, y: 4}, {x: 58, y: 3}, {x: 59, y: 3}, {x: 60, y: 3},
+              {x: 61, y: 3}, {x: 62, y: 2}, {x: 63, y: 1}, {x: 64, y: 1}
+            ],
+            backgroundColor: 'rgba(57, 255, 20, 0.7)',
+            borderColor: '#39ff14',
+            pointRadius: 5
+          },
+          {
+            label: 'Power-Ups',
+            data: [
+              {x: 1, y: 96}, {x: 2, y: 86}, {x: 3, y: 78}, {x: 4, y: 67}, {x: 5, y: 65},
+              {x: 6, y: 59}, {x: 7, y: 59}, {x: 8, y: 52}, {x: 9, y: 50}, {x: 10, y: 45},
+              {x: 11, y: 45}, {x: 12, y: 45}, {x: 13, y: 44}, {x: 14, y: 43}, {x: 15, y: 40},
+              {x: 16, y: 39}, {x: 17, y: 39}, {x: 18, y: 39}, {x: 19, y: 38}, {x: 20, y: 36},
+              {x: 21, y: 32}, {x: 22, y: 29}, {x: 23, y: 29}, {x: 24, y: 29}, {x: 25, y: 28},
+              {x: 26, y: 27}, {x: 27, y: 25}, {x: 28, y: 25}, {x: 29, y: 24}, {x: 30, y: 24},
+              {x: 31, y: 24}, {x: 32, y: 24}, {x: 33, y: 20}, {x: 34, y: 19}, {x: 35, y: 17},
+              {x: 36, y: 15}, {x: 37, y: 15}, {x: 38, y: 14}, {x: 39, y: 13}, {x: 40, y: 13},
+              {x: 41, y: 10}, {x: 42, y: 10}, {x: 43, y: 9}, {x: 44, y: 8}, {x: 45, y: 6},
+              {x: 46, y: 6}, {x: 47, y: 5}, {x: 48, y: 4}, {x: 49, y: 3}, {x: 50, y: 3},
+              {x: 51, y: 3}
+            ],
+            backgroundColor: 'rgba(255, 0, 255, 0.7)',
+            borderColor: '#ff00ff',
+            pointRadius: 5
+          },
+          {
+            label: 'Survival',
+            data: [
+              {x: 1, y: 93}, {x: 2, y: 88}, {x: 3, y: 74}, {x: 4, y: 47}, {x: 5, y: 44},
+              {x: 6, y: 44}, {x: 7, y: 43}, {x: 8, y: 42}, {x: 9, y: 41}, {x: 10, y: 41},
+              {x: 11, y: 41}, {x: 12, y: 40}, {x: 13, y: 40}, {x: 14, y: 38}, {x: 15, y: 34},
+              {x: 16, y: 33}, {x: 17, y: 32}, {x: 18, y: 32}, {x: 19, y: 31}, {x: 20, y: 30},
+              {x: 21, y: 30}, {x: 22, y: 28}, {x: 23, y: 28}, {x: 24, y: 26}, {x: 25, y: 24},
+              {x: 26, y: 23}, {x: 27, y: 22}, {x: 28, y: 20}, {x: 29, y: 20}, {x: 30, y: 20},
+              {x: 31, y: 19}, {x: 32, y: 19}, {x: 33, y: 18}, {x: 34, y: 17}, {x: 35, y: 17},
+              {x: 36, y: 16}, {x: 37, y: 15}, {x: 38, y: 14}, {x: 39, y: 14}, {x: 40, y: 13},
+              {x: 41, y: 12}, {x: 42, y: 12}, {x: 43, y: 12}, {x: 44, y: 11}, {x: 45, y: 10},
+              {x: 46, y: 10}, {x: 47, y: 8}, {x: 48, y: 8}, {x: 49, y: 7}, {x: 50, y: 5},
+              {x: 51, y: 5}, {x: 52, y: 4}
+            ],
+            backgroundColor: 'rgba(255, 102, 0, 0.7)',
+            borderColor: '#ff6600',
+            pointRadius: 5
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: '#e0e0e0' } }
+        },
+        scales: {
+          x: { 
+            title: { display: true, text: 'Rank', color: '#888' },
+            grid: { color: 'rgba(255,255,255,0.1)' },
+            ticks: { color: '#888' }
+          },
+          y: { 
+            title: { display: true, text: 'Score', color: '#888' },
+            grid: { color: 'rgba(255,255,255,0.1)' },
+            ticks: { color: '#888' }
+          }
+        }
+      }
+    });
+
+    // Average Scores Bar Chart
+    const avgCtx = document.getElementById('avgChart').getContext('2d');
+    new Chart(avgCtx, {
+      type: 'bar',
+      data: {
+        labels: ['Classic', 'Power-Ups', 'Survival'],
+        datasets: [
+          {
+            label: 'Average Score',
+            data: [19.6, 30.9, 27.2],
+            backgroundColor: ['rgba(57, 255, 20, 0.7)', 'rgba(255, 0, 255, 0.7)', 'rgba(255, 102, 0, 0.7)'],
+            borderColor: ['#39ff14', '#ff00ff', '#ff6600'],
+            borderWidth: 2
+          },
+          {
+            label: 'Max Score',
+            data: [110, 96, 93],
+            backgroundColor: ['rgba(57, 255, 20, 0.3)', 'rgba(255, 0, 255, 0.3)', 'rgba(255, 102, 0, 0.3)'],
+            borderColor: ['#39ff14', '#ff00ff', '#ff6600'],
+            borderWidth: 2,
+            borderDash: [5, 5]
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { color: '#e0e0e0' } }
+        },
+        scales: {
+          x: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#888' } },
+          y: { grid: { color: 'rgba(255,255,255,0.1)' }, ticks: { color: '#888' } }
+        }
+      }
+    });
+
+    // Pie Chart
+    const pieCtx = document.getElementById('pieChart').getContext('2d');
+    new Chart(pieCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Classic (64)', 'Power-Ups (51)', 'Survival (52)'],
+        datasets: [{
+          data: [64, 51, 52],
+          backgroundColor: ['rgba(57, 255, 20, 0.8)', 'rgba(255, 0, 255, 0.8)', 'rgba(255, 102, 0, 0.8)'],
+          borderColor: ['#39ff14', '#ff00ff', '#ff6600'],
+          borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { 
+            position: 'bottom',
+            labels: { color: '#e0e0e0', padding: 20 }
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
+

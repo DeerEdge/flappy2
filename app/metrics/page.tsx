@@ -1,51 +1,325 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { GameMode, MODE_NAMES, MODE_COLORS } from '@/lib/game/types';
 
-interface GlobalMetrics {
-  totalGamesPlayed: number;
-  totalPlayTime: number;
-  gamesByMode: Record<GameMode, number>;
-  highScoreByMode: Record<GameMode, number>;
-  avgScoreByMode: Record<GameMode, number>;
-  longestSurvival: number;
+interface Score {
+  player_name: string;
+  score: number;
+  game_mode: string;
+  created_at: string;
+}
+
+interface ModeStats {
+  count: number;
+  avg: number;
+  min: number;
+  max: number;
+  median: number;
+  stdDev: number;
+  scores: number[];
 }
 
 export default function MetricsPage() {
-  const [metrics, setMetrics] = useState<GlobalMetrics | null>(null);
+  const [scores, setScores] = useState<Score[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'scatter' | 'trends' | 'leaderboard'>('overview');
+  
+  const scatterCanvasRef = useRef<HTMLCanvasElement>(null);
+  const distributionCanvasRef = useRef<HTMLCanvasElement>(null);
+  const trendCanvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
-    fetchMetrics();
+    fetchAllScores();
   }, []);
 
-  const fetchMetrics = async () => {
+  const fetchAllScores = async () => {
     try {
-      const res = await fetch('/api/metrics');
-      const data = await res.json();
+      const modes = ['original', 'modified', 'obstacles'];
+      const allScores: Score[] = [];
       
-      if (data.error) {
-        setError(data.error);
-      } else {
-        setMetrics(data.metrics);
+      for (const mode of modes) {
+        const res = await fetch(`/api/scores?mode=${mode}&limit=50`);
+        const data = await res.json();
+        if (data.scores) {
+          allScores.push(...data.scores);
+        }
       }
+      
+      setScores(allScores);
     } catch {
-      setError('Failed to load metrics');
+      setError('Failed to load scores');
     } finally {
       setLoading(false);
     }
   };
 
-  const formatTime = (seconds: number): string => {
-    if (seconds < 60) return `${Math.round(seconds)}s`;
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${Math.round(seconds % 60)}s`;
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    return `${hours}h ${mins}m`;
+  const getModeStats = (mode: string): ModeStats => {
+    const modeScores = scores.filter(s => s.game_mode === mode).map(s => s.score).sort((a, b) => a - b);
+    if (modeScores.length === 0) return { count: 0, avg: 0, min: 0, max: 0, median: 0, stdDev: 0, scores: [] };
+    
+    const avg = modeScores.reduce((a, b) => a + b, 0) / modeScores.length;
+    const median = modeScores.length % 2 === 0 
+      ? (modeScores[modeScores.length / 2 - 1] + modeScores[modeScores.length / 2]) / 2
+      : modeScores[Math.floor(modeScores.length / 2)];
+    const variance = modeScores.reduce((sum, s) => sum + Math.pow(s - avg, 2), 0) / modeScores.length;
+    const stdDev = Math.sqrt(variance);
+    
+    return {
+      count: modeScores.length,
+      avg: Math.round(avg * 10) / 10,
+      min: Math.min(...modeScores),
+      max: Math.max(...modeScores),
+      median,
+      stdDev: Math.round(stdDev * 10) / 10,
+      scores: modeScores
+    };
   };
+
+  const drawScatterPlot = () => {
+    const canvas = scatterCanvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    
+    const width = rect.width;
+    const height = rect.height;
+    const padding = 50;
+    
+    // Clear
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillRect(0, 0, width, height);
+    
+    // Grid
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 5; i++) {
+      const y = padding + (height - padding * 2) * i / 5;
+      ctx.beginPath();
+      ctx.moveTo(padding, y);
+      ctx.lineTo(width - padding, y);
+      ctx.stroke();
+    }
+    
+    const allScores = scores.map(s => s.score);
+    const maxScore = Math.max(...allScores, 100);
+    
+    // Draw points for each mode
+    const modes: { mode: string; color: string }[] = [
+      { mode: 'original', color: '#39ff14' },
+      { mode: 'modified', color: '#ff00ff' },
+      { mode: 'obstacles', color: '#ff6600' }
+    ];
+    
+    modes.forEach(({ mode, color }) => {
+      const modeScores = scores.filter(s => s.game_mode === mode);
+      modeScores.forEach((score, index) => {
+        const x = padding + (index / Math.max(modeScores.length - 1, 1)) * (width - padding * 2);
+        const y = height - padding - (score.score / maxScore) * (height - padding * 2);
+        
+        // Glow effect
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 10;
+        
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.shadowBlur = 0;
+      });
+    });
+    
+    // Axes labels
+    ctx.fillStyle = '#888';
+    ctx.font = '12px VT323, monospace';
+    ctx.fillText('RANK →', width / 2, height - 10);
+    ctx.save();
+    ctx.translate(15, height / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('SCORE →', 0, 0);
+    ctx.restore();
+    
+    // Y-axis values
+    for (let i = 0; i <= 5; i++) {
+      const value = Math.round(maxScore * (5 - i) / 5);
+      const y = padding + (height - padding * 2) * i / 5;
+      ctx.fillText(value.toString(), 5, y + 4);
+    }
+  };
+
+  const drawDistribution = () => {
+    const canvas = distributionCanvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    
+    const width = rect.width;
+    const height = rect.height;
+    const padding = 50;
+    
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillRect(0, 0, width, height);
+    
+    // Create histogram buckets
+    const bucketSize = 20;
+    const maxScore = Math.max(...scores.map(s => s.score), 100);
+    const numBuckets = Math.ceil(maxScore / bucketSize) + 1;
+    
+    const modes: { mode: string; color: string }[] = [
+      { mode: 'original', color: '#39ff14' },
+      { mode: 'modified', color: '#ff00ff' },
+      { mode: 'obstacles', color: '#ff6600' }
+    ];
+    
+    const barWidth = (width - padding * 2) / numBuckets / 3;
+    
+    modes.forEach(({ mode, color }, modeIndex) => {
+      const modeScores = scores.filter(s => s.game_mode === mode);
+      const buckets = new Array(numBuckets).fill(0);
+      
+      modeScores.forEach(s => {
+        const bucket = Math.floor(s.score / bucketSize);
+        if (bucket < numBuckets) buckets[bucket]++;
+      });
+      
+      const maxBucket = Math.max(...buckets, 1);
+      
+      buckets.forEach((count, i) => {
+        const x = padding + i * (width - padding * 2) / numBuckets + modeIndex * barWidth;
+        const barHeight = (count / maxBucket) * (height - padding * 2) * 0.8;
+        const y = height - padding - barHeight;
+        
+        ctx.fillStyle = color;
+        ctx.globalAlpha = 0.7;
+        ctx.fillRect(x, y, barWidth - 2, barHeight);
+        ctx.globalAlpha = 1;
+      });
+    });
+    
+    // X-axis labels
+    ctx.fillStyle = '#888';
+    ctx.font = '10px VT323, monospace';
+    for (let i = 0; i <= numBuckets; i += 2) {
+      const x = padding + i * (width - padding * 2) / numBuckets;
+      ctx.fillText((i * bucketSize).toString(), x, height - 10);
+    }
+    ctx.fillText('SCORE RANGE →', width / 2, height - 25);
+  };
+
+  const drawTrendLine = () => {
+    const canvas = trendCanvasRef.current;
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    
+    const width = rect.width;
+    const height = rect.height;
+    const padding = 50;
+    
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    ctx.fillRect(0, 0, width, height);
+    
+    // Group scores by date
+    const modes: { mode: string; color: string }[] = [
+      { mode: 'original', color: '#39ff14' },
+      { mode: 'modified', color: '#ff00ff' },
+      { mode: 'obstacles', color: '#ff6600' }
+    ];
+    
+    const allDates = [...new Set(scores.map(s => s.created_at.split('T')[0]))].sort();
+    const maxScore = Math.max(...scores.map(s => s.score), 100);
+    
+    modes.forEach(({ mode, color }) => {
+      const modeScores = scores.filter(s => s.game_mode === mode);
+      const dateAvgs: { date: string; avg: number }[] = [];
+      
+      allDates.forEach(date => {
+        const dayScores = modeScores.filter(s => s.created_at.startsWith(date));
+        if (dayScores.length > 0) {
+          const avg = dayScores.reduce((sum, s) => sum + s.score, 0) / dayScores.length;
+          dateAvgs.push({ date, avg });
+        }
+      });
+      
+      if (dateAvgs.length < 2) return;
+      
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 5;
+      ctx.beginPath();
+      
+      dateAvgs.forEach((point, i) => {
+        const x = padding + (i / (dateAvgs.length - 1)) * (width - padding * 2);
+        const y = height - padding - (point.avg / maxScore) * (height - padding * 2);
+        
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      
+      // Draw points
+      dateAvgs.forEach((point, i) => {
+        const x = padding + (i / (dateAvgs.length - 1)) * (width - padding * 2);
+        const y = height - padding - (point.avg / maxScore) * (height - padding * 2);
+        
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    });
+    
+    // Labels
+    ctx.fillStyle = '#888';
+    ctx.font = '12px VT323, monospace';
+    ctx.fillText('TIME →', width / 2, height - 10);
+  };
+
+  useEffect(() => {
+    if (scores.length > 0) {
+      drawScatterPlot();
+      drawDistribution();
+      drawTrendLine();
+    }
+  }, [scores, activeTab]);
+
+  const stats = {
+    original: getModeStats('original'),
+    modified: getModeStats('modified'),
+    obstacles: getModeStats('obstacles')
+  };
+
+  const totalGames = stats.original.count + stats.modified.count + stats.obstacles.count;
+  const topPlayers = [...scores]
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
 
   return (
     <main className="min-h-screen bg-[var(--background)] relative overflow-hidden">
@@ -71,7 +345,7 @@ export default function MetricsPage() {
 
       <div className="relative z-10 min-h-screen p-4 md:p-6">
         {/* Header with navigation */}
-        <header className="flex items-center justify-between mb-8">
+        <header className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-2">
             <span className="font-pixel text-sm md:text-lg text-[var(--neon-green)] glow-green">
               flappy
@@ -81,7 +355,6 @@ export default function MetricsPage() {
             </span>
           </div>
           
-          {/* Navigation */}
           <nav className="flex gap-2">
             <Link href="/">
               <button className="arcade-panel px-4 py-2 font-pixel text-xs text-[var(--neon-green)] hover:bg-[var(--neon-green)] hover:text-black transition-colors">
@@ -95,9 +368,9 @@ export default function MetricsPage() {
         </header>
 
         {/* Main content */}
-        <div className="max-w-4xl mx-auto">
-          <h1 className="font-pixel text-2xl text-[var(--neon-cyan)] glow-cyan text-center mb-8">
-            📊 GLOBAL PLAYER METRICS
+        <div className="max-w-6xl mx-auto">
+          <h1 className="font-pixel text-xl md:text-2xl text-[var(--neon-cyan)] glow-cyan text-center mb-6">
+            📊 GAME ANALYTICS
           </h1>
 
           {loading ? (
@@ -108,161 +381,405 @@ export default function MetricsPage() {
             <div className="text-center py-12">
               <div className="font-pixel text-red-500">{error}</div>
             </div>
-          ) : metrics ? (
-            <div className="space-y-6">
-              {/* Overview Stats */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="arcade-panel p-4 text-center">
-                  <div className="font-pixel text-3xl text-[var(--neon-green)] glow-green">
-                    {metrics.totalGamesPlayed}
-                  </div>
-                  <div className="font-retro text-xs text-gray-400 mt-1">TOTAL GAMES</div>
-                </div>
-                <div className="arcade-panel p-4 text-center">
-                  <div className="font-pixel text-3xl text-[var(--neon-cyan)] glow-cyan">
-                    {formatTime(metrics.totalPlayTime)}
-                  </div>
-                  <div className="font-retro text-xs text-gray-400 mt-1">TOTAL PLAYTIME</div>
-                </div>
-                <div className="arcade-panel p-4 text-center">
-                  <div className="font-pixel text-3xl text-[var(--neon-yellow)]">
-                    {Math.max(
-                      metrics.highScoreByMode.original,
-                      metrics.highScoreByMode.modified,
-                      metrics.highScoreByMode.obstacles
-                    )}
-                  </div>
-                  <div className="font-retro text-xs text-gray-400 mt-1">ALL-TIME HIGH</div>
-                </div>
-                <div className="arcade-panel p-4 text-center">
-                  <div className="font-pixel text-3xl text-[var(--neon-orange)]">
-                    {metrics.longestSurvival}s
-                  </div>
-                  <div className="font-retro text-xs text-gray-400 mt-1">LONGEST SURVIVAL</div>
-                </div>
+          ) : (
+            <>
+              {/* Tab Navigation */}
+              <div className="flex justify-center gap-2 mb-6 flex-wrap">
+                {(['overview', 'scatter', 'trends', 'leaderboard'] as const).map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`arcade-panel px-4 py-2 font-pixel text-xs transition-colors ${
+                      activeTab === tab 
+                        ? 'bg-[var(--neon-magenta)] text-black' 
+                        : 'text-[var(--neon-magenta)] hover:bg-[var(--neon-magenta)]/20'
+                    }`}
+                  >
+                    {tab.toUpperCase()}
+                  </button>
+                ))}
               </div>
 
-              {/* Mode Breakdown */}
-              <div className="arcade-panel p-6">
-                <h2 className="font-pixel text-sm text-[var(--neon-magenta)] mb-4 text-center">
-                  MODE BREAKDOWN
-                </h2>
-                <div className="grid md:grid-cols-3 gap-4">
-                  {(['original', 'modified', 'obstacles'] as GameMode[]).map(mode => (
-                    <div 
-                      key={mode}
-                      className="bg-black/30 rounded-lg p-4 border-2"
-                      style={{ borderColor: MODE_COLORS[mode] }}
-                    >
+              {/* Overview Tab */}
+              {activeTab === 'overview' && (
+                <div className="space-y-6">
+                  {/* Summary Stats */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="arcade-panel p-4 text-center">
+                      <div className="font-pixel text-2xl md:text-3xl text-[var(--neon-green)] glow-green">
+                        {totalGames}
+                      </div>
+                      <div className="font-retro text-xs text-gray-400 mt-1">TOTAL GAMES</div>
+                    </div>
+                    <div className="arcade-panel p-4 text-center">
+                      <div className="font-pixel text-2xl md:text-3xl text-[var(--neon-cyan)] glow-cyan">
+                        {Math.max(stats.original.max, stats.modified.max, stats.obstacles.max)}
+                      </div>
+                      <div className="font-retro text-xs text-gray-400 mt-1">ALL-TIME HIGH</div>
+                    </div>
+                    <div className="arcade-panel p-4 text-center">
+                      <div className="font-pixel text-2xl md:text-3xl text-[var(--neon-yellow)]">
+                        {Math.round((stats.original.avg * stats.original.count + 
+                          stats.modified.avg * stats.modified.count + 
+                          stats.obstacles.avg * stats.obstacles.count) / totalGames) || 0}
+                      </div>
+                      <div className="font-retro text-xs text-gray-400 mt-1">GLOBAL AVG</div>
+                    </div>
+                    <div className="arcade-panel p-4 text-center">
+                      <div className="font-pixel text-2xl md:text-3xl text-[var(--neon-orange)]">
+                        {stats.obstacles.max}s
+                      </div>
+                      <div className="font-retro text-xs text-gray-400 mt-1">LONGEST SURVIVAL</div>
+                    </div>
+                  </div>
+
+                  {/* Mode Comparison */}
+                  <div className="arcade-panel p-6">
+                    <h2 className="font-pixel text-sm text-[var(--neon-magenta)] mb-4 text-center">
+                      MODE STATISTICS
+                    </h2>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-center">
+                        <thead>
+                          <tr className="font-retro text-xs text-gray-400">
+                            <th className="p-2">MODE</th>
+                            <th className="p-2">GAMES</th>
+                            <th className="p-2">AVG</th>
+                            <th className="p-2">MEDIAN</th>
+                            <th className="p-2">MIN</th>
+                            <th className="p-2">MAX</th>
+                            <th className="p-2">STD DEV</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(['original', 'modified', 'obstacles'] as const).map(mode => (
+                            <tr key={mode} className="font-pixel text-sm">
+                              <td className="p-2" style={{ color: MODE_COLORS[mode] }}>
+                                {MODE_NAMES[mode]}
+                              </td>
+                              <td className="p-2 text-white">{stats[mode].count}</td>
+                              <td className="p-2 text-white">{stats[mode].avg}</td>
+                              <td className="p-2 text-white">{stats[mode].median}</td>
+                              <td className="p-2 text-white">{stats[mode].min}</td>
+                              <td className="p-2 text-white">{stats[mode].max}</td>
+                              <td className="p-2 text-white">{stats[mode].stdDev}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Score Distribution Histogram */}
+                  <div className="arcade-panel p-6">
+                    <h2 className="font-pixel text-sm text-[var(--neon-yellow)] mb-4 text-center">
+                      SCORE DISTRIBUTION
+                    </h2>
+                    <canvas 
+                      ref={distributionCanvasRef}
+                      className="w-full h-64 rounded"
+                    />
+                    <div className="flex justify-center gap-6 mt-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#39ff14' }} />
+                        <span className="font-retro text-xs text-gray-400">CLASSIC</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#ff00ff' }} />
+                        <span className="font-retro text-xs text-gray-400">POWER-UPS</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded" style={{ backgroundColor: '#ff6600' }} />
+                        <span className="font-retro text-xs text-gray-400">SURVIVAL</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Insights */}
+                  <div className="arcade-panel p-6">
+                    <h2 className="font-pixel text-sm text-[var(--neon-cyan)] mb-4 text-center">
+                      📈 KEY INSIGHTS
+                    </h2>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="bg-black/30 rounded p-4">
+                        <div className="font-retro text-xs text-gray-400 mb-2">Most Popular Mode</div>
+                        <div className="font-pixel text-lg" style={{ 
+                          color: stats.original.count >= stats.modified.count && stats.original.count >= stats.obstacles.count 
+                            ? '#39ff14' 
+                            : stats.modified.count >= stats.obstacles.count ? '#ff00ff' : '#ff6600'
+                        }}>
+                          {stats.original.count >= stats.modified.count && stats.original.count >= stats.obstacles.count 
+                            ? 'CLASSIC' 
+                            : stats.modified.count >= stats.obstacles.count ? 'POWER-UPS' : 'SURVIVAL'}
+                        </div>
+                        <div className="font-retro text-xs text-gray-500 mt-1">
+                          {Math.max(stats.original.count, stats.modified.count, stats.obstacles.count)} games played
+                        </div>
+                      </div>
+                      <div className="bg-black/30 rounded p-4">
+                        <div className="font-retro text-xs text-gray-400 mb-2">Highest Variance Mode</div>
+                        <div className="font-pixel text-lg" style={{ 
+                          color: stats.obstacles.stdDev >= stats.modified.stdDev && stats.obstacles.stdDev >= stats.original.stdDev 
+                            ? '#ff6600' 
+                            : stats.modified.stdDev >= stats.original.stdDev ? '#ff00ff' : '#39ff14'
+                        }}>
+                          {stats.obstacles.stdDev >= stats.modified.stdDev && stats.obstacles.stdDev >= stats.original.stdDev 
+                            ? 'SURVIVAL' 
+                            : stats.modified.stdDev >= stats.original.stdDev ? 'POWER-UPS' : 'CLASSIC'}
+                        </div>
+                        <div className="font-retro text-xs text-gray-500 mt-1">
+                          σ = {Math.max(stats.original.stdDev, stats.modified.stdDev, stats.obstacles.stdDev)}
+                        </div>
+                      </div>
+                      <div className="bg-black/30 rounded p-4">
+                        <div className="font-retro text-xs text-gray-400 mb-2">Best Average Score</div>
+                        <div className="font-pixel text-lg" style={{ 
+                          color: stats.modified.avg >= stats.obstacles.avg && stats.modified.avg >= stats.original.avg 
+                            ? '#ff00ff' 
+                            : stats.obstacles.avg >= stats.original.avg ? '#ff6600' : '#39ff14'
+                        }}>
+                          {stats.modified.avg >= stats.obstacles.avg && stats.modified.avg >= stats.original.avg 
+                            ? 'POWER-UPS' 
+                            : stats.obstacles.avg >= stats.original.avg ? 'SURVIVAL' : 'CLASSIC'}
+                        </div>
+                        <div className="font-retro text-xs text-gray-500 mt-1">
+                          Avg: {Math.max(stats.original.avg, stats.modified.avg, stats.obstacles.avg)}
+                        </div>
+                      </div>
+                      <div className="bg-black/30 rounded p-4">
+                        <div className="font-retro text-xs text-gray-400 mb-2">Skill Ceiling</div>
+                        <div className="font-pixel text-lg text-[var(--neon-yellow)]">
+                          {stats.modified.max >= stats.obstacles.max && stats.modified.max >= stats.original.max 
+                            ? 'POWER-UPS' 
+                            : stats.obstacles.max >= stats.original.max ? 'SURVIVAL' : 'CLASSIC'}
+                        </div>
+                        <div className="font-retro text-xs text-gray-500 mt-1">
+                          Max: {Math.max(stats.original.max, stats.modified.max, stats.obstacles.max)}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Scatter Tab */}
+              {activeTab === 'scatter' && (
+                <div className="space-y-6">
+                  <div className="arcade-panel p-6">
+                    <h2 className="font-pixel text-sm text-[var(--neon-green)] mb-4 text-center">
+                      SCORE SCATTER PLOT (BY RANK)
+                    </h2>
+                    <canvas 
+                      ref={scatterCanvasRef}
+                      className="w-full h-80 rounded"
+                    />
+                    <div className="flex justify-center gap-6 mt-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#39ff14' }} />
+                        <span className="font-retro text-xs text-gray-400">CLASSIC ({stats.original.count})</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ff00ff' }} />
+                        <span className="font-retro text-xs text-gray-400">POWER-UPS ({stats.modified.count})</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ff6600' }} />
+                        <span className="font-retro text-xs text-gray-400">SURVIVAL ({stats.obstacles.count})</span>
+                      </div>
+                    </div>
+                    <p className="font-retro text-xs text-gray-500 text-center mt-4">
+                      Each point represents a game. X-axis shows rank within mode, Y-axis shows score.
+                    </p>
+                  </div>
+
+                  {/* Mode-specific scatter analysis */}
+                  <div className="grid md:grid-cols-3 gap-4">
+                    {(['original', 'modified', 'obstacles'] as const).map(mode => (
                       <div 
-                        className="font-pixel text-sm mb-3 text-center"
-                        style={{ color: MODE_COLORS[mode] }}
+                        key={mode}
+                        className="arcade-panel p-4"
+                        style={{ borderColor: MODE_COLORS[mode] }}
                       >
-                        {MODE_NAMES[mode]}
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <span className="font-retro text-xs text-gray-400">Games</span>
-                          <span 
-                            className="font-pixel text-lg"
-                            style={{ color: MODE_COLORS[mode] }}
-                          >
-                            {metrics.gamesByMode[mode]}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="font-retro text-xs text-gray-400">High Score</span>
-                          <span 
-                            className="font-pixel text-lg"
-                            style={{ color: MODE_COLORS[mode] }}
-                          >
-                            {metrics.highScoreByMode[mode]}
-                          </span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="font-retro text-xs text-gray-400">Average</span>
-                          <span 
-                            className="font-pixel text-lg"
-                            style={{ color: MODE_COLORS[mode] }}
-                          >
-                            {metrics.avgScoreByMode[mode]}
-                          </span>
+                        <h3 className="font-pixel text-xs mb-3 text-center" style={{ color: MODE_COLORS[mode] }}>
+                          {MODE_NAMES[mode]}
+                        </h3>
+                        <div className="space-y-2 font-retro text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Range:</span>
+                            <span className="text-white">{stats[mode].min} - {stats[mode].max}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Spread:</span>
+                            <span className="text-white">{stats[mode].max - stats[mode].min}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Variance:</span>
+                            <span className="text-white">{(stats[mode].stdDev * stats[mode].stdDev).toFixed(1)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-400">Outliers:</span>
+                            <span className="text-white">
+                              {stats[mode].scores.filter(s => 
+                                s > stats[mode].avg + 2 * stats[mode].stdDev || 
+                                s < stats[mode].avg - 2 * stats[mode].stdDev
+                              ).length}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Fun Stats */}
-              <div className="arcade-panel p-6">
-                <h2 className="font-pixel text-sm text-[var(--neon-yellow)] mb-4 text-center">
-                  FUN FACTS
-                </h2>
-                <div className="grid md:grid-cols-2 gap-4 text-center">
-                  <div className="bg-black/30 rounded p-3">
-                    <div className="font-retro text-xs text-gray-400 mb-1">Most Popular Mode</div>
-                    <div className="font-pixel text-lg" style={{ 
-                      color: MODE_COLORS[
-                        Object.entries(metrics.gamesByMode)
-                          .sort(([,a], [,b]) => b - a)[0]?.[0] as GameMode || 'original'
-                      ]
-                    }}>
-                      {MODE_NAMES[
-                        Object.entries(metrics.gamesByMode)
-                          .sort(([,a], [,b]) => b - a)[0]?.[0] as GameMode || 'original'
-                      ]}
+              {/* Trends Tab */}
+              {activeTab === 'trends' && (
+                <div className="space-y-6">
+                  <div className="arcade-panel p-6">
+                    <h2 className="font-pixel text-sm text-[var(--neon-magenta)] mb-4 text-center">
+                      DAILY AVERAGE SCORE TRENDS
+                    </h2>
+                    <canvas 
+                      ref={trendCanvasRef}
+                      className="w-full h-80 rounded"
+                    />
+                    <div className="flex justify-center gap-6 mt-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-0.5" style={{ backgroundColor: '#39ff14' }} />
+                        <span className="font-retro text-xs text-gray-400">CLASSIC</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-0.5" style={{ backgroundColor: '#ff00ff' }} />
+                        <span className="font-retro text-xs text-gray-400">POWER-UPS</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-0.5" style={{ backgroundColor: '#ff6600' }} />
+                        <span className="font-retro text-xs text-gray-400">SURVIVAL</span>
+                      </div>
                     </div>
+                    <p className="font-retro text-xs text-gray-500 text-center mt-4">
+                      Shows daily average scores over time. Lines connect days with recorded games.
+                    </p>
                   </div>
-                  <div className="bg-black/30 rounded p-3">
-                    <div className="font-retro text-xs text-gray-400 mb-1">Avg Game Length</div>
-                    <div className="font-pixel text-lg text-[var(--neon-cyan)]">
-                      {metrics.totalGamesPlayed > 0 
-                        ? formatTime(metrics.totalPlayTime / metrics.totalGamesPlayed)
-                        : '0s'}
-                    </div>
-                  </div>
-                  <div className="bg-black/30 rounded p-3">
-                    <div className="font-retro text-xs text-gray-400 mb-1">Total Points Scored</div>
-                    <div className="font-pixel text-lg text-[var(--neon-green)]">
-                      {(
-                        metrics.avgScoreByMode.original * metrics.gamesByMode.original +
-                        metrics.avgScoreByMode.modified * metrics.gamesByMode.modified +
-                        metrics.avgScoreByMode.obstacles * metrics.gamesByMode.obstacles
-                      ).toFixed(0)}
-                    </div>
-                  </div>
-                  <div className="bg-black/30 rounded p-3">
-                    <div className="font-retro text-xs text-gray-400 mb-1">Best Mode Avg</div>
-                    <div className="font-pixel text-lg" style={{
-                      color: MODE_COLORS[
-                        Object.entries(metrics.avgScoreByMode)
-                          .sort(([,a], [,b]) => b - a)[0]?.[0] as GameMode || 'original'
-                      ]
-                    }}>
-                      {MODE_NAMES[
-                        Object.entries(metrics.avgScoreByMode)
-                          .sort(([,a], [,b]) => b - a)[0]?.[0] as GameMode || 'original'
-                      ]}
+
+                  {/* Trend Analysis */}
+                  <div className="arcade-panel p-6">
+                    <h2 className="font-pixel text-sm text-[var(--neon-yellow)] mb-4 text-center">
+                      TREND ANALYSIS
+                    </h2>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="bg-black/30 rounded p-4">
+                        <div className="font-retro text-xs text-gray-400 mb-2">Data Points</div>
+                        <div className="font-pixel text-2xl text-[var(--neon-cyan)]">{totalGames}</div>
+                        <div className="font-retro text-xs text-gray-500 mt-1">Total games recorded</div>
+                      </div>
+                      <div className="bg-black/30 rounded p-4">
+                        <div className="font-retro text-xs text-gray-400 mb-2">Date Range</div>
+                        <div className="font-pixel text-lg text-[var(--neon-green)]">
+                          {[...new Set(scores.map(s => s.created_at.split('T')[0]))].length} days
+                        </div>
+                        <div className="font-retro text-xs text-gray-500 mt-1">Active playing days</div>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
+
+              {/* Leaderboard Tab */}
+              {activeTab === 'leaderboard' && (
+                <div className="space-y-6">
+                  <div className="arcade-panel p-6">
+                    <h2 className="font-pixel text-sm text-[var(--neon-yellow)] mb-4 text-center">
+                      🏆 TOP 10 ALL-TIME
+                    </h2>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="font-retro text-xs text-gray-400 text-left">
+                            <th className="p-2">#</th>
+                            <th className="p-2">PLAYER</th>
+                            <th className="p-2">SCORE</th>
+                            <th className="p-2">MODE</th>
+                            <th className="p-2">DATE</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {topPlayers.map((player, i) => (
+                            <tr 
+                              key={`${player.player_name}-${player.score}-${i}`}
+                              className={`font-pixel text-sm ${i < 3 ? 'text-[var(--neon-yellow)]' : 'text-white'}`}
+                            >
+                              <td className="p-2">{i + 1}</td>
+                              <td className="p-2">{player.player_name}</td>
+                              <td className="p-2">{player.score}</td>
+                              <td className="p-2">
+                                <span 
+                                  className="px-2 py-1 rounded text-xs"
+                                  style={{ 
+                                    backgroundColor: MODE_COLORS[player.game_mode as GameMode] + '33',
+                                    color: MODE_COLORS[player.game_mode as GameMode]
+                                  }}
+                                >
+                                  {MODE_NAMES[player.game_mode as GameMode]}
+                                </span>
+                              </td>
+                              <td className="p-2 font-retro text-xs text-gray-400">
+                                {player.created_at.split('T')[0]}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Mode-specific top scores */}
+                  <div className="grid md:grid-cols-3 gap-4">
+                    {(['original', 'modified', 'obstacles'] as const).map(mode => {
+                      const modeTop = scores
+                        .filter(s => s.game_mode === mode)
+                        .sort((a, b) => b.score - a.score)
+                        .slice(0, 5);
+                      
+                      return (
+                        <div key={mode} className="arcade-panel p-4">
+                          <h3 
+                            className="font-pixel text-xs mb-3 text-center"
+                            style={{ color: MODE_COLORS[mode] }}
+                          >
+                            TOP 5 {MODE_NAMES[mode]}
+                          </h3>
+                          <div className="space-y-2">
+                            {modeTop.map((s, i) => (
+                              <div 
+                                key={`${s.player_name}-${s.score}-${i}`}
+                                className="flex justify-between items-center font-retro text-xs"
+                              >
+                                <span className="text-gray-400">{i + 1}. {s.player_name}</span>
+                                <span style={{ color: MODE_COLORS[mode] }}>{s.score}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Refresh button */}
-              <div className="text-center">
+              <div className="text-center mt-8">
                 <button 
-                  onClick={fetchMetrics}
+                  onClick={() => {
+                    setLoading(true);
+                    fetchAllScores();
+                  }}
                   className="arcade-panel px-6 py-2 font-pixel text-xs text-[var(--neon-green)] hover:bg-[var(--neon-green)] hover:text-black transition-colors"
                 >
-                  REFRESH STATS
+                  REFRESH DATA
                 </button>
               </div>
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <div className="font-pixel text-gray-500">NO DATA AVAILABLE</div>
-            </div>
+            </>
           )}
         </div>
 
@@ -276,4 +793,3 @@ export default function MetricsPage() {
     </main>
   );
 }
-

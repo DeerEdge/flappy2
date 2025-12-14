@@ -27,6 +27,7 @@ export default function MetricsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'scatter' | 'trends' | 'leaderboard'>('overview');
+  const [scatterSortBy, setScatterSortBy] = useState<'time' | 'rank'>('time');
   
   const scatterCanvasRef = useRef<HTMLCanvasElement>(null);
   const distributionCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -150,13 +151,12 @@ export default function MetricsPage() {
     const allScores = scores.map(s => s.score);
     const maxScore = Math.max(...allScores, 100);
     
-    // Get time range for x-axis
+    // Get time range for x-axis (used when sorting by time)
     const timestamps = scores.map(s => new Date(s.created_at).getTime());
     const minTime = Math.min(...timestamps);
     const maxTime = Math.max(...timestamps);
     const timeRange = maxTime - minTime || 1;
     
-    // Draw points for each mode - scatter by time
     const modes: { mode: string; color: string }[] = [
       { mode: 'original', color: '#39ff14' },
       { mode: 'modified', color: '#ff00ff' },
@@ -165,11 +165,24 @@ export default function MetricsPage() {
     
     modes.forEach(({ mode, color }) => {
       const modeScores = scores.filter(s => s.game_mode === mode);
-      modeScores.forEach((score) => {
-        const scoreTime = new Date(score.created_at).getTime();
-        // Add slight random jitter to x position to prevent overlap
-        const jitter = (Math.random() - 0.5) * 20;
-        const x = padding + ((scoreTime - minTime) / timeRange) * (width - padding * 2) + jitter;
+      
+      // Sort by rank (score descending) if that option is selected
+      const sortedScores = scatterSortBy === 'rank' 
+        ? [...modeScores].sort((a, b) => b.score - a.score)
+        : modeScores;
+      
+      sortedScores.forEach((score, index) => {
+        let x: number;
+        
+        if (scatterSortBy === 'time') {
+          const scoreTime = new Date(score.created_at).getTime();
+          const jitter = (Math.random() - 0.5) * 15;
+          x = padding + ((scoreTime - minTime) / timeRange) * (width - padding * 2) + jitter;
+        } else {
+          // By rank - spread evenly across x-axis
+          x = padding + (index / Math.max(sortedScores.length - 1, 1)) * (width - padding * 2);
+        }
+        
         const y = height - padding - (score.score / maxScore) * (height - padding * 2);
         
         // Outer glow
@@ -213,34 +226,45 @@ export default function MetricsPage() {
       ctx.fillText(value.toString(), 5, y + 4);
     }
     
-    // X-axis date labels
-    const startDate = new Date(minTime);
-    const endDate = new Date(maxTime);
-    const dateLabels = [];
-    const tempDate = new Date(startDate);
-    while (tempDate <= endDate) {
-      dateLabels.push(new Date(tempDate));
-      tempDate.setDate(tempDate.getDate() + 3); // Every 3 days
-    }
-    if (dateLabels.length > 0 && dateLabels[dateLabels.length - 1].getTime() < endDate.getTime()) {
-      dateLabels.push(endDate);
-    }
-    
+    // X-axis labels
     ctx.fillStyle = '#888';
     ctx.font = '10px VT323, monospace';
     ctx.textAlign = 'center';
-    dateLabels.forEach(date => {
-      const x = padding + ((date.getTime() - minTime) / timeRange) * (width - padding * 2);
-      const label = `${date.getMonth() + 1}/${date.getDate()}`;
-      ctx.fillText(label, x, height - 25);
-    });
+    
+    if (scatterSortBy === 'time') {
+      // Date labels for time view
+      const startDate = new Date(minTime);
+      const endDate = new Date(maxTime);
+      const dateLabels: Date[] = [];
+      const tempDate = new Date(startDate);
+      while (tempDate <= endDate) {
+        dateLabels.push(new Date(tempDate));
+        tempDate.setDate(tempDate.getDate() + 3);
+      }
+      if (dateLabels.length > 0 && dateLabels[dateLabels.length - 1].getTime() < endDate.getTime()) {
+        dateLabels.push(endDate);
+      }
+      
+      dateLabels.forEach(date => {
+        const x = padding + ((date.getTime() - minTime) / timeRange) * (width - padding * 2);
+        const label = `${date.getMonth() + 1}/${date.getDate()}`;
+        ctx.fillText(label, x, height - 25);
+      });
+    } else {
+      // Rank labels for rank view
+      const labels = ['#1', '#10', '#20', '#30', '#40', '#50'];
+      labels.forEach((label, i) => {
+        const x = padding + (i / (labels.length - 1)) * (width - padding * 2);
+        ctx.fillText(label, x, height - 25);
+      });
+    }
     ctx.textAlign = 'left';
     
     // Axis title
     ctx.fillStyle = '#39ff14';
     ctx.font = '14px VT323, monospace';
     ctx.textAlign = 'center';
-    ctx.fillText('DATE', width / 2, height - 8);
+    ctx.fillText(scatterSortBy === 'time' ? 'DATE' : 'RANK', width / 2, height - 8);
     ctx.textAlign = 'left';
   };
 
@@ -349,38 +373,64 @@ export default function MetricsPage() {
       ctx.stroke();
     }
     
-    // Group scores by date - show individual scores, not averages
     const modes: { mode: string; color: string }[] = [
       { mode: 'original', color: '#39ff14' },
       { mode: 'modified', color: '#ff00ff' },
       { mode: 'obstacles', color: '#ff6600' }
     ];
     
+    // Get all unique dates and sort them
+    const allDates = [...new Set(scores.map(s => s.created_at.split('T')[0]))].sort();
+    if (allDates.length < 2) return;
+    
     const maxScore = Math.max(...scores.map(s => s.score), 100);
-    const timestamps = scores.map(s => new Date(s.created_at).getTime());
-    const minTime = Math.min(...timestamps);
-    const maxTime = Math.max(...timestamps);
-    const timeRange = maxTime - minTime || 1;
     
     modes.forEach(({ mode, color }) => {
-      const modeScores = scores
-        .filter(s => s.game_mode === mode)
-        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      // Calculate daily averages for this mode
+      const dailyAvgs: { date: string; avg: number; count: number }[] = [];
       
-      if (modeScores.length < 2) return;
+      allDates.forEach(date => {
+        const dayScores = scores.filter(s => s.game_mode === mode && s.created_at.startsWith(date));
+        if (dayScores.length > 0) {
+          const avg = dayScores.reduce((sum, s) => sum + s.score, 0) / dayScores.length;
+          dailyAvgs.push({ date, avg, count: dayScores.length });
+        }
+      });
       
-      // Draw line connecting points
+      if (dailyAvgs.length < 2) return;
+      
+      // Draw filled area under the line (subtle)
+      ctx.beginPath();
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.1;
+      
+      dailyAvgs.forEach((point, i) => {
+        const x = padding + (i / (dailyAvgs.length - 1)) * (width - padding * 2);
+        const y = height - padding - (point.avg / maxScore) * (height - padding * 2);
+        if (i === 0) {
+          ctx.moveTo(x, height - padding);
+          ctx.lineTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      });
+      ctx.lineTo(padding + (width - padding * 2), height - padding);
+      ctx.closePath();
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      
+      // Draw the trend line (smoother, thicker)
       ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 3;
       ctx.shadowColor = color;
-      ctx.shadowBlur = 8;
+      ctx.shadowBlur = 10;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
       ctx.beginPath();
       
-      modeScores.forEach((score, i) => {
-        const scoreTime = new Date(score.created_at).getTime();
-        const x = padding + ((scoreTime - minTime) / timeRange) * (width - padding * 2);
-        const y = height - padding - (score.score / maxScore) * (height - padding * 2);
-        
+      dailyAvgs.forEach((point, i) => {
+        const x = padding + (i / (dailyAvgs.length - 1)) * (width - padding * 2);
+        const y = height - padding - (point.avg / maxScore) * (height - padding * 2);
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       });
@@ -388,23 +438,57 @@ export default function MetricsPage() {
       ctx.stroke();
       ctx.shadowBlur = 0;
       
-      // Draw points
-      modeScores.forEach((score) => {
-        const scoreTime = new Date(score.created_at).getTime();
-        const x = padding + ((scoreTime - minTime) / timeRange) * (width - padding * 2);
-        const y = height - padding - (score.score / maxScore) * (height - padding * 2);
+      // Draw points at each data point
+      dailyAvgs.forEach((point, i) => {
+        const x = padding + (i / (dailyAvgs.length - 1)) * (width - padding * 2);
+        const y = height - padding - (point.avg / maxScore) * (height - padding * 2);
         
-        ctx.fillStyle = color;
+        // Outer ring
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(x, y, 6, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        // Inner fill
+        ctx.fillStyle = '#0a0a1a';
         ctx.beginPath();
         ctx.arc(x, y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Center dot
+        ctx.fillStyle = color;
+        ctx.beginPath();
+        ctx.arc(x, y, 2, 0, Math.PI * 2);
         ctx.fill();
       });
     });
     
-    // Labels
+    // Y-axis labels
     ctx.fillStyle = '#888';
+    ctx.font = '10px VT323, monospace';
+    for (let i = 0; i <= 5; i++) {
+      const value = Math.round(maxScore * (5 - i) / 5);
+      const y = padding + (height - padding * 2) * i / 5;
+      ctx.fillText(value.toString(), 5, y + 4);
+    }
+    
+    // X-axis date labels
+    ctx.textAlign = 'center';
+    const dateStep = Math.max(1, Math.floor(allDates.length / 6));
+    allDates.forEach((date, i) => {
+      if (i % dateStep === 0 || i === allDates.length - 1) {
+        const x = padding + (i / (allDates.length - 1)) * (width - padding * 2);
+        const d = new Date(date);
+        ctx.fillText(`${d.getMonth() + 1}/${d.getDate()}`, x, height - 25);
+      }
+    });
+    
+    // Axis title
+    ctx.fillStyle = '#39ff14';
     ctx.font = '12px VT323, monospace';
-    ctx.fillText('TIME →', width / 2, height - 10);
+    ctx.fillText('DATE', width / 2, height - 8);
+    ctx.textAlign = 'left';
   };
 
   useEffect(() => {
@@ -413,7 +497,7 @@ export default function MetricsPage() {
       drawDistribution();
       drawTrendLine();
     }
-  }, [scores, activeTab]);
+  }, [scores, activeTab, scatterSortBy]);
 
   const stats = {
     original: getModeStats('original'),
@@ -678,9 +762,33 @@ export default function MetricsPage() {
               {activeTab === 'scatter' && (
                 <div className="space-y-6">
                   <div className="arcade-panel p-6">
-                    <h2 className="font-pixel text-sm text-[var(--neon-green)] mb-4 text-center">
-                      SCORE SCATTER PLOT (BY TIME)
-                    </h2>
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="font-pixel text-sm text-[var(--neon-green)]">
+                        SCORE SCATTER PLOT
+                      </h2>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setScatterSortBy('time')}
+                          className={`px-3 py-1 font-pixel text-[10px] border transition-colors ${
+                            scatterSortBy === 'time'
+                              ? 'bg-[var(--neon-green)] text-black border-[var(--neon-green)]'
+                              : 'text-[var(--neon-green)] border-[var(--neon-green)]/50 hover:border-[var(--neon-green)]'
+                          }`}
+                        >
+                          BY TIME
+                        </button>
+                        <button
+                          onClick={() => setScatterSortBy('rank')}
+                          className={`px-3 py-1 font-pixel text-[10px] border transition-colors ${
+                            scatterSortBy === 'rank'
+                              ? 'bg-[var(--neon-cyan)] text-black border-[var(--neon-cyan)]'
+                              : 'text-[var(--neon-cyan)] border-[var(--neon-cyan)]/50 hover:border-[var(--neon-cyan)]'
+                          }`}
+                        >
+                          BY RANK
+                        </button>
+                      </div>
+                    </div>
                     <canvas 
                       ref={scatterCanvasRef}
                       className="w-full h-80 rounded"

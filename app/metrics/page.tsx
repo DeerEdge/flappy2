@@ -172,7 +172,6 @@ export default function MetricsPage() {
     ctx.shadowBlur = 0;
     ctx.fillStyle = '#39ff14';
     ctx.font = '14px VT323, monospace';
-    ctx.fillText('TIME →', width / 2 - 20, height - 15);
     ctx.save();
     ctx.translate(20, height / 2);
     ctx.rotate(-Math.PI / 2);
@@ -187,6 +186,36 @@ export default function MetricsPage() {
       const y = padding + (height - padding * 2) * i / 6;
       ctx.fillText(value.toString(), 5, y + 4);
     }
+    
+    // X-axis date labels
+    const startDate = new Date(minTime);
+    const endDate = new Date(maxTime);
+    const dateLabels = [];
+    const tempDate = new Date(startDate);
+    while (tempDate <= endDate) {
+      dateLabels.push(new Date(tempDate));
+      tempDate.setDate(tempDate.getDate() + 3); // Every 3 days
+    }
+    if (dateLabels.length > 0 && dateLabels[dateLabels.length - 1].getTime() < endDate.getTime()) {
+      dateLabels.push(endDate);
+    }
+    
+    ctx.fillStyle = '#888';
+    ctx.font = '10px VT323, monospace';
+    ctx.textAlign = 'center';
+    dateLabels.forEach(date => {
+      const x = padding + ((date.getTime() - minTime) / timeRange) * (width - padding * 2);
+      const label = `${date.getMonth() + 1}/${date.getDate()}`;
+      ctx.fillText(label, x, height - 25);
+    });
+    ctx.textAlign = 'left';
+    
+    // Axis title
+    ctx.fillStyle = '#39ff14';
+    ctx.font = '14px VT323, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('DATE', width / 2, height - 8);
+    ctx.textAlign = 'left';
   };
 
   const drawDistribution = () => {
@@ -440,7 +469,7 @@ export default function MetricsPage() {
                     onClick={() => setActiveTab(tab)}
                     className={`arcade-panel px-4 py-2 font-pixel text-xs transition-colors ${
                       activeTab === tab 
-                        ? 'bg-[var(--neon-magenta)] text-black' 
+                        ? 'bg-[var(--neon-magenta)] text-white' 
                         : 'text-[var(--neon-magenta)] hover:bg-[var(--neon-magenta)]/20'
                     }`}
                   >

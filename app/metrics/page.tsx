@@ -93,27 +93,44 @@ export default function MetricsPage() {
     
     const width = rect.width;
     const height = rect.height;
-    const padding = 50;
+    const padding = 60;
     
-    // Clear
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    // Clear with gradient background
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, 'rgba(10, 10, 20, 0.9)');
+    gradient.addColorStop(1, 'rgba(20, 20, 40, 0.9)');
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
     
-    // Grid
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+    // Grid with better visibility
+    ctx.strokeStyle = 'rgba(57, 255, 20, 0.15)';
     ctx.lineWidth = 1;
-    for (let i = 0; i <= 5; i++) {
-      const y = padding + (height - padding * 2) * i / 5;
+    for (let i = 0; i <= 6; i++) {
+      const y = padding + (height - padding * 2) * i / 6;
       ctx.beginPath();
       ctx.moveTo(padding, y);
       ctx.lineTo(width - padding, y);
+      ctx.stroke();
+    }
+    // Vertical grid lines
+    for (let i = 0; i <= 5; i++) {
+      const x = padding + (width - padding * 2) * i / 5;
+      ctx.beginPath();
+      ctx.moveTo(x, padding);
+      ctx.lineTo(x, height - padding);
       ctx.stroke();
     }
     
     const allScores = scores.map(s => s.score);
     const maxScore = Math.max(...allScores, 100);
     
-    // Draw points for each mode
+    // Get time range for x-axis
+    const timestamps = scores.map(s => new Date(s.created_at).getTime());
+    const minTime = Math.min(...timestamps);
+    const maxTime = Math.max(...timestamps);
+    const timeRange = maxTime - minTime || 1;
+    
+    // Draw points for each mode - scatter by time
     const modes: { mode: string; color: string }[] = [
       { mode: 'original', color: '#39ff14' },
       { mode: 'modified', color: '#ff00ff' },
@@ -122,37 +139,52 @@ export default function MetricsPage() {
     
     modes.forEach(({ mode, color }) => {
       const modeScores = scores.filter(s => s.game_mode === mode);
-      modeScores.forEach((score, index) => {
-        const x = padding + (index / Math.max(modeScores.length - 1, 1)) * (width - padding * 2);
+      modeScores.forEach((score) => {
+        const scoreTime = new Date(score.created_at).getTime();
+        // Add slight random jitter to x position to prevent overlap
+        const jitter = (Math.random() - 0.5) * 20;
+        const x = padding + ((scoreTime - minTime) / timeRange) * (width - padding * 2) + jitter;
         const y = height - padding - (score.score / maxScore) * (height - padding * 2);
         
-        // Glow effect
+        // Outer glow
         ctx.shadowColor = color;
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 15;
+        
+        // Draw larger points for outliers
+        const isOutlier = score.score > maxScore * 0.6;
+        const radius = isOutlier ? 8 : 6;
         
         ctx.fillStyle = color;
         ctx.beginPath();
-        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
         ctx.fill();
         
+        // Inner highlight
         ctx.shadowBlur = 0;
+        ctx.fillStyle = 'rgba(255,255,255,0.4)';
+        ctx.beginPath();
+        ctx.arc(x - 2, y - 2, radius / 3, 0, Math.PI * 2);
+        ctx.fill();
       });
     });
     
-    // Axes labels
-    ctx.fillStyle = '#888';
-    ctx.font = '12px VT323, monospace';
-    ctx.fillText('RANK →', width / 2, height - 10);
+    // Axes labels with better styling
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#39ff14';
+    ctx.font = '14px VT323, monospace';
+    ctx.fillText('TIME →', width / 2 - 20, height - 15);
     ctx.save();
-    ctx.translate(15, height / 2);
+    ctx.translate(20, height / 2);
     ctx.rotate(-Math.PI / 2);
-    ctx.fillText('SCORE →', 0, 0);
+    ctx.fillText('SCORE →', -20, 0);
     ctx.restore();
     
     // Y-axis values
-    for (let i = 0; i <= 5; i++) {
-      const value = Math.round(maxScore * (5 - i) / 5);
-      const y = padding + (height - padding * 2) * i / 5;
+    ctx.fillStyle = '#888';
+    ctx.font = '12px VT323, monospace';
+    for (let i = 0; i <= 6; i++) {
+      const value = Math.round(maxScore * (6 - i) / 6);
+      const y = padding + (height - padding * 2) * i / 6;
       ctx.fillText(value.toString(), 5, y + 4);
     }
   };
@@ -172,9 +204,13 @@ export default function MetricsPage() {
     
     const width = rect.width;
     const height = rect.height;
-    const padding = 50;
+    const padding = 60;
     
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    // Gradient background
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, 'rgba(10, 10, 20, 0.9)');
+    gradient.addColorStop(1, 'rgba(20, 20, 40, 0.9)');
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
     
     // Create histogram buckets
@@ -238,44 +274,57 @@ export default function MetricsPage() {
     
     const width = rect.width;
     const height = rect.height;
-    const padding = 50;
+    const padding = 60;
     
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    // Gradient background
+    const gradient = ctx.createLinearGradient(0, 0, 0, height);
+    gradient.addColorStop(0, 'rgba(10, 10, 20, 0.9)');
+    gradient.addColorStop(1, 'rgba(20, 20, 40, 0.9)');
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, width, height);
     
-    // Group scores by date
+    // Grid
+    ctx.strokeStyle = 'rgba(57, 255, 20, 0.1)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 5; i++) {
+      const y = padding + (height - padding * 2) * i / 5;
+      ctx.beginPath();
+      ctx.moveTo(padding, y);
+      ctx.lineTo(width - padding, y);
+      ctx.stroke();
+    }
+    
+    // Group scores by date - show individual scores, not averages
     const modes: { mode: string; color: string }[] = [
       { mode: 'original', color: '#39ff14' },
       { mode: 'modified', color: '#ff00ff' },
       { mode: 'obstacles', color: '#ff6600' }
     ];
     
-    const allDates = [...new Set(scores.map(s => s.created_at.split('T')[0]))].sort();
     const maxScore = Math.max(...scores.map(s => s.score), 100);
+    const timestamps = scores.map(s => new Date(s.created_at).getTime());
+    const minTime = Math.min(...timestamps);
+    const maxTime = Math.max(...timestamps);
+    const timeRange = maxTime - minTime || 1;
     
     modes.forEach(({ mode, color }) => {
-      const modeScores = scores.filter(s => s.game_mode === mode);
-      const dateAvgs: { date: string; avg: number }[] = [];
+      const modeScores = scores
+        .filter(s => s.game_mode === mode)
+        .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
       
-      allDates.forEach(date => {
-        const dayScores = modeScores.filter(s => s.created_at.startsWith(date));
-        if (dayScores.length > 0) {
-          const avg = dayScores.reduce((sum, s) => sum + s.score, 0) / dayScores.length;
-          dateAvgs.push({ date, avg });
-        }
-      });
+      if (modeScores.length < 2) return;
       
-      if (dateAvgs.length < 2) return;
-      
+      // Draw line connecting points
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.shadowColor = color;
-      ctx.shadowBlur = 5;
+      ctx.shadowBlur = 8;
       ctx.beginPath();
       
-      dateAvgs.forEach((point, i) => {
-        const x = padding + (i / (dateAvgs.length - 1)) * (width - padding * 2);
-        const y = height - padding - (point.avg / maxScore) * (height - padding * 2);
+      modeScores.forEach((score, i) => {
+        const scoreTime = new Date(score.created_at).getTime();
+        const x = padding + ((scoreTime - minTime) / timeRange) * (width - padding * 2);
+        const y = height - padding - (score.score / maxScore) * (height - padding * 2);
         
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);

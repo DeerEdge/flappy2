@@ -87,6 +87,7 @@ export interface GameState {
   gameMode: GameMode;
   activePowerUps: ActivePowerUp[];
   hasShield: boolean;
+  shieldBreakTime: number | null; // Invincibility after shield breaks
   collectEffect: CollectEffect | null; // For visual feedback
   // Debug state
   debugMode?: boolean;

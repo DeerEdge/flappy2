@@ -88,6 +88,7 @@ export class FlappyEngine {
       gameMode,
       activePowerUps: [],
       hasShield: false,
+      shieldBreakTime: null,
       collectEffect: null,
     };
   }
@@ -642,8 +643,18 @@ export class FlappyEngine {
   }
 
   private handleCollision(): void {
+    // Check if still invincible from shield break
+    if (this.state.shieldBreakTime !== null) {
+      const elapsed = Date.now() - this.state.shieldBreakTime;
+      if (elapsed < 1000) { // 1 second of invincibility after shield breaks
+        return;
+      }
+      this.state.shieldBreakTime = null;
+    }
+    
     if (this.state.hasShield) {
       this.state.hasShield = false;
+      this.state.shieldBreakTime = Date.now(); // Start invincibility
       return;
     }
     
@@ -1121,6 +1132,15 @@ export class FlappyEngine {
     const ctx = this.ctx;
     const bird = this.state.bird;
     
+    // Check if bird is invincible (flashing effect)
+    const isInvincible = this.state.shieldBreakTime !== null && 
+      (Date.now() - this.state.shieldBreakTime) < 1000;
+    
+    // Flash the bird when invincible
+    if (isInvincible && Math.floor(Date.now() / 100) % 2 === 0) {
+      ctx.globalAlpha = 0.3;
+    }
+    
     ctx.save();
     ctx.translate(bird.x + bird.width / 2, bird.y + bird.height / 2);
     ctx.rotate((bird.rotation * Math.PI) / 180);
@@ -1192,6 +1212,7 @@ export class FlappyEngine {
     ctx.fill();
     
     ctx.restore();
+    ctx.globalAlpha = 1; // Reset alpha after bird render
   }
 
   private renderScore(): void {

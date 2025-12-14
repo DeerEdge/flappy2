@@ -469,9 +469,10 @@ export default function MetricsPage() {
                     onClick={() => setActiveTab(tab)}
                     className={`arcade-panel px-4 py-2 font-pixel text-xs transition-colors ${
                       activeTab === tab 
-                        ? 'bg-[var(--neon-magenta)] text-white' 
+                        ? 'bg-[var(--neon-magenta)]' 
                         : 'text-[var(--neon-magenta)] hover:bg-[var(--neon-magenta)]/20'
                     }`}
+                    style={activeTab === tab ? { color: '#ffffff' } : undefined}
                   >
                     {tab.toUpperCase()}
                   </button>

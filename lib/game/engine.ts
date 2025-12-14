@@ -212,7 +212,9 @@ export class FlappyEngine {
   }
 
   private updatePipes(speedMod: number): void {
-    const speed = this.config.pipeSpeed * speedMod;
+    // Speed increases over time - starts at 1.0, maxes at 1.8 after 60 seconds (~score 60)
+    const timeMultiplier = Math.min(1 + (this.state.score / 75), 1.8);
+    const speed = this.config.pipeSpeed * speedMod * timeMultiplier;
     
     this.state.pipes = this.state.pipes.filter(pipe => {
       pipe.x -= speed;
@@ -1265,10 +1267,10 @@ export class FlappyEngine {
       ctx.strokeRect(offsetX, 10, 35, 35);
       
       ctx.fillStyle = COLORS.shield;
-      ctx.font = 'bold 14px monospace';
+      ctx.font = '14px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('S', offsetX + 17.5, 22);
+      ctx.fillText('🛡', offsetX + 17.5, 22);
       
       ctx.font = 'bold 8px monospace';
       ctx.fillText('READY', offsetX + 17.5, 36);

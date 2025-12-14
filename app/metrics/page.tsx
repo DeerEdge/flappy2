@@ -616,7 +616,7 @@ export default function MetricsPage() {
                 <div className="space-y-6">
                   <div className="arcade-panel p-6">
                     <h2 className="font-pixel text-sm text-[var(--neon-green)] mb-4 text-center">
-                      SCORE SCATTER PLOT (BY RANK)
+                      SCORE SCATTER PLOT (BY TIME)
                     </h2>
                     <canvas 
                       ref={scatterCanvasRef}
@@ -637,7 +637,7 @@ export default function MetricsPage() {
                       </div>
                     </div>
                     <p className="font-retro text-xs text-gray-500 text-center mt-4">
-                      Each point represents a game. X-axis shows rank within mode, Y-axis shows score.
+                      Each point represents a game. X-axis shows time, Y-axis shows score. Larger dots are outliers.
                     </p>
                   </div>
 
